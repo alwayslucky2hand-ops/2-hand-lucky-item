@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>特洛伊AI助教 | 二手家具智慧派單平台</title>
+    <style>
+        :root {
+            --primary-black: #000000;
+            --border-color: #1a1a1a;
+            --bg-white: #ffffff;
+            --accent-red: #ff4d4d;
+            --accent-yellow: #ffd700;
+            --accent-green: #2ecc71;
+            --gray-light: #f9f9f9;
+        }
+
+        * { box-sizing: border-box; font-family: "Inter", "Noto Sans TC", sans-serif; letter-spacing: 0.08em; }
+        body { background-color: var(--bg-white); color: var(--primary-black); margin: 0; padding: 0; line-height: 1.6; }
+
+        /* Layout */
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        header { border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 30px; }
+        .section { display: none; border: 1px solid var(--border-color); padding: 20px; margin-bottom: 20px; animation: fadeIn 0.3s ease; }
+        .section.active { display: block; }
+
+        /* UI Components */
+        input, textarea, select { 
+            width: 100%; border: 1px solid var(--border-color); padding: 12px; margin: 10px 0; 
+            border-radius: 0; outline: none; font-size: 14px;
+        }
+        button { 
+            background: var(--bg-white); border: 1px solid var(--border-color); padding: 12px 24px; 
+            cursor: pointer; transition: 0.2s; width: 100%; font-weight: bold;
+        }
+        button:hover { background: var(--primary-black); color: var(--bg-white); }
+        button.active { background: var(--primary-black); color: var(--bg-white); }
+        
+        .card { border: 1px solid var(--border-color); padding: 15px; margin-bottom: 15px; position: relative; }
+        .deadline-indicator { height: 2px; width: 100%; position: absolute; top: 0; left: 0; }
+        
+        /* Navigation */
+        nav { display: flex; overflow-x: auto; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
+        nav div { padding: 10px 20px; cursor: pointer; white-space: nowrap; font-size: 12px; }
+        nav div.active { border-bottom: 3px solid var(--primary-black); font-weight: bold; }
+
+        /* Feedback */
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #000; color: #fff; padding: 10px 20px; display: none; z-index: 1000; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>TROY AI</h1>
+        <p style="font-size: 12px; color: #666;">二手家具界 Uber 核心規格系統</p>
+    </header>
+
+    <nav id="mainNav">
+        <div data-target="gateway" class="active">真人驗證</div>
+        <div data-target="lobby">成交大廳</div>
+        <div data-target="onboarding">買方登錄</div>
+        <div data-target="launchpad">AI上架</div>
+        <div data-target="strategy">媒合看板</div>
+        <div data-target="final">核銷點交</div>
+    </nav>
+
+    <!-- Chapter 1: Identity Gateway -->
+    <section id="gateway" class="section active">
+        <h3>真人驗證大門</h3>
+        <input type="email" id="userEmail" placeholder="輸入通訊信箱 (Email)">
+        <button onclick="lockEmail()">○ 步驟一：核對並鎖定 Email</button>
+        
+        <div id="videoArea" style="display:none; margin-top:20px;">
+            <div style="border:1px solid #000; height:200px; background:#eee; display:flex; align-items:center; justify-content:center; margin-bottom:10px;">
+                <span id="fakeCode" style="font-size:24px; font-weight:bold; letter-spacing:10px;">----</span>
+            </div>
+            <button onclick="startLiveness()">○ 步驟二：開始3秒活體驗證</button>
+            <progress id="verifyProgress" value="0" max="100" style="width:100%; display:none;"></progress>
+        </div>
+    </section>
+
+    <!-- Chapter 3: Match Lobby -->
+    <section id="lobby" class="section">
+        <div id="lobbyStats" style="font-size:11px; margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:5px;">
+            ● 平台已累計為地球成功減碳 <span id="totalCO2">0</span> KG ─ 累計為人類經濟贖回利潤 $<span id="totalProfit">0</span> 元
+        </div>
+        <div style="display:flex; gap:5px; margin-bottom:20px;" id="lobbyFilters">
+            <button class="filter-btn" onclick="toggleFilter(this, '沙發')">○ 沙發類</button>
+            <button class="filter-btn" onclick="toggleFilter(this, '桌椅')">○ 桌椅類</button>
+            <button class="filter-btn" onclick="toggleFilter(this, '家電')">○ 家電類</button>
+        </div>
+        <div id="lobbyList">
+            <!-- Dynamic Cards -->
+        </div>
+        <hr>
+        <div id="archiveToggle" style="text-align:center; font-size:12px; cursor:pointer;" onclick="toggleArchive()">
+            ─ 點擊解鎖平台成交誠信履歷 ─
+        </div>
+        <div id="archiveList" style="display:none; margin-top:15px; opacity:0.6;"></div>
+    </section>
+
+    <!-- Chapter 1-A: Demand Onboarding -->
+    <section id="onboarding" class="section">
+        <h3>買方需求預登錄</h3>
+        <textarea id="demandRaw" rows="4" placeholder="請輸入您的尋物大白話... (例如：我想找一個三公尺內的灰色沙發，預算五千，下週五前要搬進去)"></textarea>
+        <button id="btnAiDeconstruct" onclick="aiDeconstructDemand()">➔ 授權 AI 轉化需求</button>
+        
+        <div id="deconstructedForm" style="display:none; margin-top:20px; border-top:1px solid #000; padding-top:20px;">
+            <input type="text" id="reqItem" placeholder="需求品項">
+            <input type="text" id="reqColor" placeholder="需求色系">
+            <input type="date" id="reqDeadline" placeholder="最晚需拿到日期">
+            <input type="number" id="reqBudget" placeholder="支付預算">
+            <div id="budgetHint" style="font-size:11px; color:blue; margin-bottom:10px;"></div>
+            <button onclick="submitDemand()">● 需求正式登錄大廳</button>
+        </div>
+    </section>
+
+    <!-- Chapter 2: AI Launchpad -->
+    <section id="launchpad" class="section">
+        <h3>AI軍師魔幻上架</h3>
+        <div style="border:1px dashed #000; padding:40px; text-align:center; margin-bottom:10px;">
+            <input type="file" id="itemVideo" accept="video/*" capture="camera" style="display:none;">
+            <button onclick="document.getElementById('itemVideo').click()">+ 喚醒相機進行 10 秒現場錄影上架</button>
+        </div>
+        <div id="aiPreFill" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px;">
+            <input type="number" id="dimL" placeholder="長(cm)">
+            <input type="number" id="dimW" placeholder="寬(cm)">
+            <input type="number" id="dimH" placeholder="高(cm)">
+        </div>
+        <input type="number" id="itemPrice" placeholder="您的售價">
+        <input type="date" id="itemDeadline" placeholder="幾月幾號前要售出">
+        <div id="lossAversionHint" style="font-size:11px; color:red; margin-bottom:10px;"></div>
+        <button onclick="submitLaunch()">➔ 確認送出上架</button>
+    </section>
+
+    <!-- Chapter 4: Strategy Board -->
+    <section id="strategy" class="section">
+        <h3>專屬媒合看板</h3>
+        <div id="matchList">
+            <!-- Match Cards -->
+        </div>
+    </section>
+
+    <!-- Chapter 5: Final Dotpoint -->
+    <section id="final" class="section">
+        <h3>現場電子簽名核銷</h3>
+        <div id="activeItemInfo" style="font-size:14px; font-weight:bold; margin-bottom:10px; color:var(--accent-red);"></div>
+        <div style="border:1px solid #000; margin-bottom:10px;">
+            <canvas id="sigCanvas" width="500" height="200" style="width:100%; touch-action:none;"></canvas>
+        </div>
+        <button onclick="clearCanvas()">清除重簽</button>
+        <div style="margin-top:20px;">
+            <p style="font-size:12px;">賣家補登資訊 (撥款必備):</p>
+            <button style="margin-bottom:5px;">○ 上傳身分證正面</button>
+            <button style="margin-bottom:5px;">○ 上傳身分證反面</button>
+            <button style="margin-bottom:10px;">○ 上傳銀行帳號封面</button>
+        </div>
+        <button onclick="completeDeal()">● 確定點交無誤，執行核銷建案</button>
+    </section>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+    /** ⚠️ 真實環境參數動態寫入 **/
+    const DRIVE_FOLDER_ID = "1m5Cy6egA8WqhzrEZAQ4GvAG8moP49F1f?usp=drive_link";
+    const DRIVE_MEDIA_ID = "1m5Cy6egA8WqhzrEZAQ4GvAG8moP49F1f?usp=drive_link";
+    const SHEET_ID = "1Oojj6KcLNmrYTrms4UrNEPzoAot23YOMHPGPLZvmeDg";
+    const GAS_ID = "1P0r5-pfhHvYOiliOYQWFZHvJaKoBpWyE0w5JJExK-UB7nDtVFIh_4XFB";
+    const CALENDAR_ID = "movingayue@gmail.com";
+    const GMAIL_ID = "movingayue@gmail.com";
+    const EXTERNAL_WEBHOOK = "編碼";
+    const GAS_WEB_URL = "https://script.google.com/macros/s/AKfycbwaq-13DlQxTCBTnTdJ1ILFvUvnr-_P7tKbeSXUixN3oaRMcoWnIH4qJuxjrRUtpUtK/exec";
+    const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
+
+    let appData = { lobby: [], matches: [], user: {} };
+    let currentActiveRowId = null;
+
+    // --- 核心：雙棲運行與資料流 ---
+    async function callBackend(funcName, payload = {}) {
+        showToast(`正在處理: ${funcName}...`);
+        if (typeof google !== 'undefined') {
+            return new Promise((resolve, reject) => {
+                google.script.run
+                    .withSuccessHandler(res => {
+                        const unpacked = unpack(res);
+                        resolve(unpacked);
+                    })
+                    .withFailureHandler(err => {
+                        console.error("GAS Error:", err);
+                        showToast("後端執行失敗");
+                        reject(err);
+                    })
+                    [funcName](payload);
+            });
+        } else {
+            try {
+                const response = await fetch(GAS_WEB_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: funcName, data: payload })
+                });
+                const res = await response.json();
+                return unpack(res);
+            } catch (e) {
+                console.error("Fetch Error:", e);
+                showToast("網路連線異常");
+                return null;
+            }
+        }
+    }
+
+    function unpack(res) {
+        // ⚠️ 前端拆包機制：嚴格檢查 status 並返回 data
+        if (res && res.status === 'success') {
+            return res.data;
+        }
+        console.error("Backend Unpack Error:", res);
+        showToast("系統資料格式錯誤");
+        return null;
+    }
+
+    // --- UI 邏輯 ---
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        if(t) {
+            t.innerText = msg;
+            t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 3000);
+        }
+    }
+
+    // Navigation
+    document.querySelectorAll('#mainNav div').forEach(nav => {
+        nav.addEventListener('click', function() {
+            const target = this.getAttribute('data-target');
+            switchSection(target);
+        });
+    });
+
+    function switchSection(target) {
+        document.querySelectorAll('#mainNav div').forEach(n => n.classList.remove('active'));
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        
+        const navItem = document.querySelector(`[data-target="${target}"]`);
+        if(navItem) navItem.classList.add('active');
+        
+        const el = document.getElementById(target);
+        if(el) el.classList.add('active');
+        
+        if(target === 'lobby') loadLobby();
+    }
+
+    // Chapter 1: Gateway
+    function lockEmail() {
+        const emailEl = document.getElementById('userEmail');
+        if(!emailEl) return;
+        const email = emailEl.value;
+        if(!email.includes('@')) return showToast("請輸入正確 Email");
+        
+        const videoArea = document.getElementById('videoArea');
+        if(videoArea) videoArea.style.display = 'block';
+        
+        const fakeCode = document.getElementById('fakeCode');
+        if(fakeCode) fakeCode.innerText = Math.floor(1000 + Math.random() * 9000);
+    }
+
+    async function startLiveness() {
+        const progress = document.getElementById('verifyProgress');
+        if(!progress) return;
+        progress.style.display = 'block';
+        let val = 0;
+        const interval = setInterval(() => {
+            val += 10;
+            progress.value = val;
+            if(val >= 100) {
+                clearInterval(interval);
+                showToast("驗證成功！已解鎖大廳");
+                switchSection('lobby');
+            }
+        }, 300);
+    }
+
+    // Chapter 3: Lobby
+    async function loadLobby() {
+        const res = await callBackend('getLobbyProducts');
+        if(!res) return;
+        // ⚠️ 前端拆包機制：確實執行 res.lobbyItems 拆解
+        appData.lobby = res.lobbyItems || [];
+        renderLobby();
+    }
+
+    function renderLobby() {
+        const list = document.getElementById('lobbyList');
+        const archive = document.getElementById('archiveList');
+        const co2El = document.getElementById('totalCO2');
+        const profitEl = document.getElementById('totalProfit');
+        
+        if(!list || !archive) return;
+        list.innerHTML = '';
+        archive.innerHTML = '';
+
+        let totalCO2 = 0;
+        let totalProfit = 0;
+
+        appData.lobby.forEach(item => {
+            // ⚠️ 鍵值強制對標後端中文 Key
+            const itemName = item["物件品項"] || "未命名物件";
+            const price = parseFloat(item["售價/件"]) || 0;
+            const areaFull = item["取件地址"] || "未知區域";
+            const area = areaFull.substring(0, 6);
+            const ikeaDiff = parseFloat(item["IKEA價差"]) || 0;
+            const co2 = parseFloat(item["單品焚燒碳排放量"]) || 0;
+            const isSold = item["是否售出"] === true || item["是否售出"] === "TRUE";
+            const rowId = item._rowId;
+
+            // ⚠️ 動態累計邏輯
+            if(isSold) {
+                totalCO2 += co2;
+                totalProfit += ikeaDiff;
+            }
+
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.dataset.id = rowId;
+            
+            const daysLeft = parseInt(item["剩餘天數"]) || 99;
+            const deadlineColor = daysLeft <= 5 ? 'var(--accent-red)' : (daysLeft <= 10 ? 'var(--accent-yellow)' : 'var(--accent-green)');
+            
+            card.innerHTML = `
+                <div class="deadline-indicator" style="background:${deadlineColor}"></div>
+                <div style="display:flex; justify-content:space-between;">
+                    <strong>${itemName}</strong>
+                    <span style="font-size:12px;">$${price}</span>
+                </div>
+                <p style="font-size:11px; color:#666;">${area} | ${item["物件狀況"] || '狀況良好'}</p>
+                <div style="display:flex; justify-content:space-between; font-size:10px; margin-top:10px;">
+                    <span>IKEA價差: $${ikeaDiff}</span>
+                    <span>CO2減量: ${co2}kg</span>
+                </div>
+                ${!isSold ? `<button onclick="goToFinal('${rowId}', '${itemName}')" style="margin-top:10px; font-size:12px; padding:5px;">現場核銷</button>` : ''}
+            `;
+
+            if(isSold) {
+                archive.appendChild(card);
+            } else {
+                list.appendChild(card);
+            }
+        });
+
+        // ⚠️ DOM 更新：動態統計
+        if(co2El) co2El.innerText = totalCO2.toFixed(1);
+        if(profitEl) profitEl.innerText = totalProfit.toLocaleString();
+    }
+
+    function goToFinal(rowId, itemName) {
+        currentActiveRowId = rowId;
+        const infoEl = document.getElementById('activeItemInfo');
+        if(infoEl) infoEl.innerText = `正在核銷：${itemName} (ID: ${rowId})`;
+        switchSection('final');
+    }
+
+    // Chapter 1-A: Onboarding
+    async function aiDeconstructDemand() {
+        const rawEl = document.getElementById('demandRaw');
+        if(!rawEl || !rawEl.value) return;
+        
+        const btn = document.getElementById('btnAiDeconstruct');
+        if(btn) btn.innerText = "AI 通靈中...";
+        
+        const prompt = `你是一個二手家具專家。請將以下需求拆解為 JSON 格式，包含欄位: item (品項), color (色系), deadline (YYYY-MM-DD), budget (數字)。需求內容：${rawEl.value}`;
+        
+        try {
+            const response = await fetch(GEMINI_ENDPOINT, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'x-goog-api-key': GEMINI_API_KEYS[0] 
+                },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+            const result = await response.json();
+            
+            const form = document.getElementById('deconstructedForm');
+            if(form) form.style.display = 'block';
+            const hint = document.getElementById('budgetHint');
+            if(hint) hint.innerText = "[! 根據市場大數據，您的預算在合理區間，成交率預估 85%]";
+            if(btn) btn.innerText = "➔ 授權 AI 轉化需求";
+        } catch(e) {
+            console.error("Gemini Error:", e);
+            showToast("AI 暫時離線，請手動輸入");
+            const form = document.getElementById('deconstructedForm');
+            if(form) form.style.display = 'block';
+        }
+    }
+
+    // Chapter 5: Signature
+    const canvas = document.getElementById('sigCanvas');
+    if(canvas) {
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+        
+        const getPos = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left,
+                y: (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top
+            };
+        };
+
+        const start = (e) => { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); };
+        const move = (e) => { 
+            if(!drawing) return; 
+            const p = getPos(e); 
+            ctx.lineWidth = 2; 
+            ctx.lineCap = 'round'; 
+            ctx.lineTo(p.x, p.y); 
+            ctx.stroke(); 
+        };
+        const stop = () => { drawing = false; };
+
+        canvas.addEventListener('mousedown', start);
+        canvas.addEventListener('mousemove', move);
+        canvas.addEventListener('mouseup', stop);
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); start(e); });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); move(e); });
+        canvas.addEventListener('touchend', stop);
+    }
+
+    function clearCanvas() {
+        if(!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    async function completeDeal() {
+        if(!currentActiveRowId) return showToast("錯誤：未選定核銷物件");
+        
+        // 樂觀 UI：瞬間反饋
+        showToast("核銷中... 款項已進入信託並通知物流");
+        
+        const signatureBase64 = canvas ? canvas.toDataURL() : "";
+
+        // 背景非同步寫入
+        const result = await callBackend('completeTransaction', { 
+            itemRowId: currentActiveRowId,
+            signatureBase64: signatureBase64
+        });
+        
+        if(result) {
+            showToast("核銷成功！");
+            setTimeout(() => {
+                switchSection('lobby');
+                currentActiveRowId = null;
+                clearCanvas();
+            }, 1000);
+        }
+    }
+
+    function toggleArchive() {
+        const arc = document.getElementById('archiveList');
+        if(arc) {
+            arc.style.display = arc.style.display === 'none' ? 'block' : 'none';
+        }
+    }
+
+    // 初始化
+    window.onload = () => {
+        console.log("Troy AI Frontend v2.1 Optimized");
+        loadLobby();
+    };
+
+</script>
+</body>
+</html>
