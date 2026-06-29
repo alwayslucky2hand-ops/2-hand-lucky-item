@@ -20,7 +20,7 @@
         * { box-sizing: border-box; font-family: "Helvetica Neue", "Inter", "Noto Sans TC", sans-serif; letter-spacing: 0.05em; }
         body { background-color: var(--bg-gray); color: var(--text-main); margin: 0; padding: 0; line-height: 1.6; }
 
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; background: var(--bg-white); min-height: 100vh; border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; background: var(--bg-white); min-height: 100vh; border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); position: relative;}
         
         /* Typography */
         header { border-bottom: 2px solid var(--primary-black); padding-bottom: 12px; margin-bottom: 0; text-align: center; }
@@ -67,7 +67,8 @@
         button:disabled { background: #eee; cursor: not-allowed; border-color: #ddd; color: #999; }
         
         .card { border: 1px solid var(--border-color); padding: 15px; margin-bottom: 12px; background: var(--bg-white); border-radius: 2px; transition: 0.3s; }
-        .card.locked-negotiation { border: 2px double var(--primary-black); background: #fafafa; }
+        .card.locked-negotiation { border: 2px double var(--primary-black); background: #fafafa; pointer-events: none;}
+        .card.locked-negotiation button { pointer-events: auto; }
         
         /* Status Tags & Indicators */
         .tag { display: inline-block; padding: 3px 8px; font-size: 11px; font-weight: bold; border-radius: 2px; margin-right: 5px; }
@@ -94,7 +95,6 @@
         /* Grid Layouts */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 10px; }
-        .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0 10px; }
         .col-span-full { grid-column: 1 / -1; }
 
         /* Address Bar Styling */
@@ -116,6 +116,10 @@
         .lobby-card { border: 1px solid var(--border-color); background: var(--bg-white); padding: 12px; font-size: 12px; display: flex; flex-direction: column; gap: 6px; }
         .lobby-sold-banner { text-align: center; font-size: 12px; padding: 10px; border-top: 1px solid var(--primary-black); border-bottom: 1px solid var(--border-color); margin: 20px 0; cursor: pointer; background: #fafafa; color: var(--text-muted); transition: 0.2s; }
         .lobby-sold-banner:hover { background: #f0f0f0; color: var(--primary-black); }
+
+        /* Signature Modal */
+        #signModal { display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10000; padding:20px; align-items:center; justify-content:center; flex-direction:column; }
+        #signModalContent { background:var(--bg-white); padding:20px; border-radius:2px; width:100%; text-align:center; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -232,63 +236,74 @@
     </section>
 
     <section id="launchpad" class="section">
-        <h3>賣方智慧上架艙</h3>
-        <p style="font-size:12px; color:var(--text-muted); margin-bottom: 20px;">提供 10 秒影片，AI 將自動為您產出極致洗鍊的文案，並精算最佳定價策略。</p>
-        
-        <div class="seller-input-group">
-            <label style="margin-bottom:10px; cursor:pointer;">[+ 喚醒相機進行 10 秒現場錄影上傳]</label>
-            <input type="file" id="sellerMedia" accept="image/*,video/*" capture="environment" style="border: 1px dashed var(--primary-black); padding: 20px; text-align:center;">
-            <button onclick="parseSellerMedia()" id="btnParseSellerMedia" class="primary-btn" style="margin-top:5px;">AI 視覺解構與暗箱注入</button>
+        <div class="sub-nav">
+            <span id="tabAddSellerItem" class="active" onclick="toggleSellerView('add')">我要上架</span>
+            <span id="tabSellerMatches" onclick="toggleSellerView('match')">我的商品與匹配買家</span>
         </div>
 
-        <input type="hidden" id="sellerAiCategory">
-        <input type="hidden" id="sellerAiItem">
-        <input type="hidden" id="sellerAiName">
-        <input type="hidden" id="sellerAiColor">
-        <input type="hidden" id="sellerAiMaterial">
-        <input type="hidden" id="sellerAiConditionStr">
-        <input type="hidden" id="sellerAiStory">
-        <input type="hidden" id="sellerAiCO2">
-        <input type="hidden" id="sellerAiIkeaDiff">
-        
-        <div class="seller-input-group">
-            <label>AI 輔助公分尺寸 (可手動覆寫)</label>
-            <div class="grid-3">
-                <input type="number" id="sellerL" placeholder="長 (深)">
-                <input type="number" id="sellerW" placeholder="寬">
-                <input type="number" id="sellerH" placeholder="高">
+        <div id="viewAddSellerItem">
+            <p style="font-size:12px; color:var(--text-muted); margin-bottom: 20px;">提供 10 秒影片，AI 將自動為您產出極致洗鍊的文案，並精算最佳定價策略。</p>
+            
+            <div class="seller-input-group">
+                <label style="margin-bottom:10px; cursor:pointer;">[+ 喚醒相機進行 10 秒現場錄影上傳]</label>
+                <input type="file" id="sellerMedia" accept="image/*,video/*" capture="environment" style="border: 1px dashed var(--primary-black); padding: 20px; text-align:center;">
+                <button onclick="parseSellerMedia()" id="btnParseSellerMedia" class="primary-btn" style="margin-top:5px;">AI 視覺解構與暗箱注入</button>
             </div>
-        </div>
 
-        <div class="seller-input-group">
-            <div class="grid-2">
-                <div><label>售價 / 件 (限制 $10~$2000)</label><input type="number" id="sellerPrice" placeholder="$0"></div>
-                <div><label>底牌 (可接受折價折扣)</label><input type="number" id="sellerDiscount" placeholder="僅供 AI 談判用"></div>
+            <input type="hidden" id="sellerAiCategory">
+            <input type="hidden" id="sellerAiItem">
+            <input type="hidden" id="sellerAiName">
+            <input type="hidden" id="sellerAiColor">
+            <input type="hidden" id="sellerAiMaterial">
+            <input type="hidden" id="sellerAiConditionStr">
+            <input type="hidden" id="sellerAiStory">
+            <input type="hidden" id="sellerAiCO2">
+            <input type="hidden" id="sellerAiIkeaDiff">
+            
+            <div class="seller-input-group">
+                <label>AI 輔助公分尺寸 (可手動覆寫)</label>
+                <div class="grid-3">
+                    <input type="number" id="sellerL" placeholder="長 (深)">
+                    <input type="number" id="sellerW" placeholder="寬">
+                    <input type="number" id="sellerH" placeholder="高">
+                </div>
             </div>
-            <div><label>可接受狀態宣告</label><select id="sellerCondition"><option value="近全新">近全新</option><option value="良好">良好</option><option value="普通">普通</option></select></div>
-            <div id="lossAversionMsg" class="warning-box" style="display:none;"></div>
-        </div>
 
-        <div class="seller-input-group">
-            <label>取件完整地址</label>
-            <input type="text" id="sellerAddress" placeholder="縣市/鄉鎮區/路段/街道/巷弄/號碼/樓層">
-            <div class="grid-2">
-                <div><label>必須售出死線</label><input type="date" id="sellerDeadline"></div>
-                <div><label>取貨方式</label><input type="text" value="僅限自取" disabled></div>
+            <div class="seller-input-group">
+                <div class="grid-2">
+                    <div><label>售價 / 件 (限制 $10~$2000)</label><input type="number" id="sellerPrice" placeholder="$0"></div>
+                    <div><label>底牌 (可接受折價折扣)</label><input type="number" id="sellerDiscount" placeholder="僅供 AI 談判用"></div>
+                </div>
+                <div><label>可接受狀態宣告</label><select id="sellerCondition"><option value="近全新">近全新</option><option value="良好">良好</option><option value="普通">普通</option></select></div>
+                <div id="lossAversionMsg" class="warning-box" style="display:none;"></div>
             </div>
-        </div>
 
-        <div class="seller-input-group">
-            <label>加值勞務確認</label>
-            <div class="grid-2">
-                <select id="sellerDismantle"><option value="否">不需拆裝</option><option value="是">需要拆裝</option></select>
-                <select id="sellerStairs"><option value="否">無樓梯/有電梯</option><option value="是">需搬樓梯</option></select>
-                <select id="sellerHelpDismantle"><option value="買家自己拆">買家自己拆</option><option value="可協助先拆">可協助先拆</option></select>
-                <select id="sellerHelpMove"><option value="買家搬下樓">買家搬下樓</option><option value="可協助搬到一樓">可協助搬到一樓</option></select>
+            <div class="seller-input-group">
+                <label>取件完整地址</label>
+                <input type="text" id="sellerAddress" placeholder="縣市/鄉鎮區/路段/街道/巷弄/號碼/樓層">
+                <div class="grid-2">
+                    <div><label>必須售出死線</label><input type="date" id="sellerDeadline"></div>
+                    <div><label>取貨方式</label><input type="text" value="僅限自取" disabled></div>
+                </div>
             </div>
+
+            <div class="seller-input-group">
+                <label>加值勞務確認</label>
+                <div class="grid-2">
+                    <select id="sellerDismantle"><option value="否">不需拆裝</option><option value="是">需要拆裝</option></select>
+                    <select id="sellerStairs"><option value="否">無樓梯/有電梯</option><option value="是">需搬樓梯</option></select>
+                    <select id="sellerHelpDismantle"><option value="買家自己拆">買家自己拆</option><option value="可協助先拆">可協助先拆</option></select>
+                    <select id="sellerHelpMove"><option value="買家搬下樓">買家搬下樓</option><option value="可協助搬到一樓">可協助搬到一樓</option></select>
+                </div>
+            </div>
+
+            <button onclick="submitSellerItem()" id="btnSubmitSeller" class="primary-btn">➔ 確認送出上架 (啟動利潤精算)</button>
         </div>
 
-        <button onclick="submitSellerItem()" id="btnSubmitSeller" class="primary-btn">➔ 確認送出上架 (啟動利潤精算)</button>
+        <div id="viewSellerMatches" style="display:none;">
+            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 15px;">以下為您目前刊登中且未售出的物件。系統已自動為您反向匹配市場上急需此品項的買方，並以距離與死線優先排序。</p>
+            <div id="sellerMatchesList"></div>
+        </div>
     </section>
 
     <section id="lobby" class="section">
@@ -321,7 +336,31 @@
         <div id="profileFieldsArea"></div>
         <button onclick="toggleProfileEdit()" id="btnToggleProfileEdit">解鎖個人檔案</button>
         <button onclick="saveProfileChanges()" id="btnSaveProfile" style="display:none;" class="primary-btn">儲存修改</button>
+        
+        <div class="seller-input-group" style="margin-top:30px; border-top: 1px solid var(--border-color); padding-top:20px;">
+            <label>賣家登錄擴充區 (收款與法規二審必備)</label>
+            <div style="font-size:11px; color:var(--accent-red); margin-bottom:10px; font-weight:bold;">為符合平台信託與金流防禦機制，若未上傳以下證件，點交後款項將進入 HOLD_PAYMENT 暫緩撥款狀態。</div>
+            <input type="file" id="profIdFront" accept="image/*" title="[○ 上傳身分證正面]" style="margin-bottom:5px;">
+            <input type="file" id="profIdBack" accept="image/*" title="[○ 上傳身分證反面]" style="margin-bottom:5px;">
+            <input type="file" id="profBank" accept="image/*" title="[○ 上傳銀行帳號封面]" style="margin-bottom:10px;">
+            <button onclick="uploadTier2Docs()" id="btnUploadDocs" style="background:#f0f0f0;">上傳證件補登 (觸發解鎖)</button>
+        </div>
     </section>
+
+    <div id="signModal">
+        <div id="signModalContent">
+            <h3 style="margin-top:0; border-left:3px solid var(--primary-black); padding-left:10px; text-align:left;">現場電子簽名核銷</h3>
+            <p style="font-size:12px; color:var(--text-muted); text-align:left; margin-bottom:15px;">請買方當場用手指在下方 1px 黑線畫布內簽名，確認點交無誤：<br><strong id="signBuyerName" style="color:var(--primary-black); font-size:14px;"></strong></p>
+            
+            <canvas id="signPad" width="300" height="200" style="border:1px solid var(--primary-black); background:#fafafa; margin:0 auto 15px auto; display:block; touch-action:none;"></canvas>
+            
+            <div style="display:flex; gap:10px;">
+                <button onclick="clearSignPad()" style="flex:1;">清空畫布</button>
+                <button onclick="submitSignature()" id="btnSubmitSign" class="primary-btn" style="flex:2;">● 確定點交無誤，執行核銷建案</button>
+            </div>
+            <button onclick="closeSignModal()" style="margin-top:15px; border:none; background:none; color:var(--text-muted); text-decoration:underline;">取消並返回</button>
+        </div>
+    </div>
 </div>
 
 <div id="toast" class="toast"></div>
@@ -341,7 +380,7 @@
     };
 
     let appData = { 
-        lobby: [], lobbySold: [], myDemands: [], matches: [], 
+        lobby: [], lobbySold: [], myDemands: [], matches: [], sellerMatches: [],
         user: { email: "", fullProfile: null }, currentMatchFilter: 'broad', activeLobbyCat: '全部' 
     };
     let isProfileEditing = false;
@@ -401,6 +440,9 @@
                 }
             } catch(e) {}
         }
+        
+        // 畫布初始化
+        initCanvas();
     };
 
     function initAddressDropdowns() {
@@ -476,10 +518,11 @@
         document.querySelectorAll('#mainNav div').forEach(n => n.classList.remove('active')); document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.querySelector(`[data-target="${target}"]`).classList.add('active'); document.getElementById(target).classList.add('active');
         if(target === 'buyerDemand') loadMyDemands();
+        if(target === 'launchpad') toggleSellerView('add'); // 預設進上架區
         if(target === 'lobby') fetchLobbyData();
     }
 
-    // --- 買方需求 (保留不變) ---
+    // --- 買方需求 (保持不變) ---
     function toggleDemandView(view) {
         document.getElementById('tabAddDemand').classList.remove('active'); document.getElementById('tabMatchResults').classList.remove('active');
         document.getElementById('viewAddDemand').style.display = 'none'; document.getElementById('viewMatchResults').style.display = 'none';
@@ -573,7 +616,7 @@
         const res = await callBackend('deleteBuyerDemand', { id: id }); if(res) { showToast("已刪除"); loadMyDemands(); }
     }
 
-    // --- 【Chapter 4】專屬媒合清單與 AI 談判 (Strategy Board) ---
+    // --- 【Chapter 4】買方視角：匹配清單與 AI 出兵 ---
     function setMatchType(type) {
         appData.currentMatchFilter = type;
         document.getElementById('filterBroad').classList.remove('active'); document.getElementById('filterExact').classList.remove('active');
@@ -594,7 +637,7 @@
             let tagClass = "tag-green"; let statusText = "充裕";
             if(m.daysLeft <= 3) { tagClass = "tag-red"; statusText = "極緊急"; } else if (m.daysLeft <= 7) { tagClass = "tag-yellow"; statusText = "即將到期"; }
 
-            // 物理邊緣容納衝突檢測 (模擬防護：若任一邊大於 150cm 且未標示需要拆裝)
+            // 物理容納邊緣衝突預警
             let warningHTML = "";
             let L = parseInt(m.sellerItem["物件最長（寬）（公分）"]) || 0;
             let W = parseInt(m.sellerItem["物件最寬（深）（公分）"]) || 0;
@@ -622,21 +665,147 @@
                         <span class="ikea-save">省下 IKEA 同級新品費：$ ${m.sellerItem["比IKEA同種類商品便宜多少錢？"] || 0}</span>
                         <span class="co2-save">為地球減碳：${m.sellerItem["單品焚燒碳排放量"] || 0} KG CO2</span>
                     </div>
-                    <button id="btnAiNego_${idx}" onclick='launchNegotiation(${idx}, ${JSON.stringify(m).replace(/'/g, "&apos;")})' class="primary-btn">➔ 授權 AI 啟動談判</button>
+                    <div style="display:flex; gap:10px;">
+                        <button id="btnAiNego_${idx}" onclick='launchNegotiation("buyer", ${idx}, ${JSON.stringify(m).replace(/'/g, "&apos;")})' class="primary-btn" style="flex:1;">➔ 授權 AI 啟動談判</button>
+                    </div>
                 </div>`;
         });
     }
 
-    async function launchNegotiation(idx, matchObj) {
-        // UI 變化：雙線鎖死 + 黑底白字唯讀標籤
-        const btn = document.getElementById(`btnAiNego_${idx}`);
-        const card = document.getElementById(`matchCard_${idx}`);
+    // --- 【Chapter 2 & 4 擴充】賣方智慧上架艙 & 匹配買家 ---
+    function toggleSellerView(view) {
+        document.getElementById('tabAddSellerItem').classList.remove('active'); document.getElementById('tabSellerMatches').classList.remove('active');
+        document.getElementById('viewAddSellerItem').style.display = 'none'; document.getElementById('viewSellerMatches').style.display = 'none';
+        if(view === 'add') { 
+            document.getElementById('tabAddSellerItem').classList.add('active'); document.getElementById('viewAddSellerItem').style.display = 'block'; 
+        } else { 
+            document.getElementById('tabSellerMatches').classList.add('active'); document.getElementById('viewSellerMatches').style.display = 'block'; 
+            loadSellerMatches(); 
+        }
+    }
+
+    async function parseSellerMedia() {
+        const fileInput = document.getElementById('sellerMedia');
+        if(!fileInput.files.length) return showToast("請喚醒相機錄影或上傳圖片", true);
+        
+        document.getElementById('btnParseSellerMedia').disabled = true;
+        document.getElementById('btnParseSellerMedia').innerText = "AI 視覺解構與暗箱注入中...";
+        
+        let b64 = null;
+        const reader = new FileReader();
+        b64 = await new Promise(r => { reader.onload = () => r(reader.result); reader.readAsDataURL(fileInput.files[0]); });
+        
+        const res = await callBackend('aiParseSellerItem', { imageB64: b64 });
+        
+        document.getElementById('btnParseSellerMedia').disabled = false;
+        document.getElementById('btnParseSellerMedia').innerText = "AI 視覺解構與暗箱注入";
+
+        if(res) {
+            document.getElementById('sellerL').value = res.L || ""; document.getElementById('sellerW').value = res.W || ""; document.getElementById('sellerH').value = res.H || "";
+            document.getElementById('sellerAiCategory').value = res.category || ""; document.getElementById('sellerAiItem').value = res.item || "";
+            document.getElementById('sellerAiName').value = res.name || ""; document.getElementById('sellerAiColor').value = res.color || "";
+            document.getElementById('sellerAiMaterial').value = res.material || ""; document.getElementById('sellerAiConditionStr').value = res.conditionStr || "";
+            document.getElementById('sellerAiStory').value = res.story || ""; document.getElementById('sellerAiCO2').value = res.co2 || "15";
+            document.getElementById('sellerAiIkeaDiff').value = res.ikeaDiff || "1200";
+
+            const clearanceFee = res.clearanceFee || 1500;
+            const msgBox = document.getElementById('lossAversionMsg');
+            msgBox.innerHTML = `[! 利益精算預警] 若未能順利售出，您將倒貼 $${clearanceFee} 的清運費！順利賣出現省清運費，還多賺售價！`;
+            msgBox.style.display = 'block';
+
+            showToast("AI 辨識完成，已暗箱注入惜物文案與公分數據");
+        }
+    }
+
+    async function submitSellerItem() {
+        const price = parseInt(document.getElementById('sellerPrice').value);
+        if(isNaN(price) || price < 10 || price > 2000) return showToast("限價防線阻斷：售價請設定於 $10 ~ $2000 之間", true);
+        const addr = document.getElementById('sellerAddress').value.trim();
+        const deadline = document.getElementById('sellerDeadline').value;
+        if(!addr || !deadline) return showToast("取件地址與死線日期不可空白", true);
+
+        const payload = {
+            email: appData.user.email, aiCategory: document.getElementById('sellerAiCategory').value, aiItem: document.getElementById('sellerAiItem').value,
+            aiName: document.getElementById('sellerAiName').value, aiColor: document.getElementById('sellerAiColor').value, aiMaterial: document.getElementById('sellerAiMaterial').value,
+            aiConditionStr: document.getElementById('sellerAiConditionStr').value, aiStory: document.getElementById('sellerAiStory').value, aiCO2: document.getElementById('sellerAiCO2').value,
+            aiIkeaDiff: document.getElementById('sellerAiIkeaDiff').value, clearanceFee: 1500, L: document.getElementById('sellerL').value, W: document.getElementById('sellerW').value,
+            H: document.getElementById('sellerH').value, price: price, discount: document.getElementById('sellerDiscount').value, condition: document.getElementById('sellerCondition').value,
+            address: addr, deadline: deadline, dismantle: document.getElementById('sellerDismantle').value, stairs: document.getElementById('sellerStairs').value,
+            helpDismantle: document.getElementById('sellerHelpDismantle').value, helpMove: document.getElementById('sellerHelpMove').value
+        };
+
+        document.getElementById('btnSubmitSeller').disabled = true;
+        const res = await callBackend('saveSellerItem', payload);
+        document.getElementById('btnSubmitSeller').disabled = false;
+
+        if(res) {
+            showToast("上架成功！已入庫並開始精算曝光");
+            ['sellerPrice','sellerDiscount','sellerAddress','sellerDeadline','sellerL','sellerW','sellerH'].forEach(id=>document.getElementById(id).value='');
+            document.getElementById('lossAversionMsg').style.display = 'none';
+        }
+    }
+
+    async function loadSellerMatches() {
+        document.getElementById('sellerMatchesList').innerHTML = "智能演算中...";
+        const res = await callBackend('getMatchesForSeller', { email: appData.user.email });
+        if(res) {
+            appData.sellerMatches = res.myItems || [];
+            renderSellerMatches();
+        }
+    }
+
+    function renderSellerMatches() {
+        const list = document.getElementById('sellerMatchesList');
+        if(appData.sellerMatches.length === 0) return list.innerHTML = "<div style='color:var(--text-muted);'>目前無上架或符合的未售出商品。</div>";
+        list.innerHTML = "";
+
+        appData.sellerMatches.forEach((sItemObj, parentIdx) => {
+            const sItem = sItemObj.item;
+            const matches = sItemObj.matches;
+            
+            let html = `<div style="border: 2px solid var(--border-color); padding: 15px; margin-bottom: 20px; background:var(--bg-white); border-radius:2px;">
+                <div style="font-weight:bold; font-size:15px; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px; color:var(--primary-black);">
+                    📌 ${sItem["物件品項"]} ($${sItem["售價/件"]}) 
+                </div>`;
+            
+            if(matches.length === 0) {
+                html += `<div style="font-size:12px; color:var(--text-muted);">目前市場上尚未有完全吻合的急需買方。</div></div>`;
+            } else {
+                html += `<div style="font-size:12px; color:var(--text-main); margin-bottom:10px; font-weight:600;">找到以下高潛力買家，距離死線越近越優先：</div>`;
+                matches.forEach((m, childIdx) => {
+                    const uniqueId = `seller_nego_${parentIdx}_${childIdx}`;
+                    html += `
+                        <div class="card" id="matchCard_${uniqueId}" style="border: 1px dashed var(--border-color); margin-bottom:8px; box-shadow:none;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                                <strong>買家需要：${m.demand["需求物件品項"]}</strong>
+                                <span class="tag ${m.daysLeft <= 3 ? 'tag-red' : 'tag-green'}">剩 ${m.daysLeft} 天</span>
+                            </div>
+                            <div style="font-size:11px; color:var(--text-muted); margin-bottom:10px;">
+                                地點：${m.demand["所在地縣市"]}${m.demand["所在地鄉鎮區村"]} (距離匹配度: ${m.geoMatchScore >= 2 ? '📍 鄰近同區' : '📍 同縣市'})
+                            </div>
+                            <div style="display:flex; gap:10px;">
+                                <button id="btnAiNego_${uniqueId}" onclick='launchNegotiation("seller", "${uniqueId}", ${JSON.stringify({sellerItem: sItem, demand: m.demand}).replace(/'/g, "&apos;")})' class="primary-btn" style="flex:1;">➔ 授權 AI 向此買家談判</button>
+                                <button onclick='openSignModal("${sItem["物件ID"]}", "${m.demand["會員ID"]}", "${m.demand["買家稱呼"]}")' style="flex:1; border-color:var(--primary-black);">● 進入點交核銷</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+            list.innerHTML += html;
+        });
+    }
+
+    // --- AI 出兵共用邏輯 (金融撞車防線) ---
+    async function launchNegotiation(role, btnId, matchObj) {
+        const btn = document.getElementById(`btnAiNego_${btnId}`);
+        const card = document.getElementById(`matchCard_${btnId}`);
         btn.disabled = true; btn.innerText = "● AI 正在背景替您劫貨談判中..."; btn.style.backgroundColor = "var(--primary-black)"; btn.style.color = "white";
         card.classList.add("locked-negotiation");
 
         const payload = {
-            buyerEmail: appData.user.email,
-            sellerId: matchObj.sellerItem["會員ID"],
+            initiatorRole: role, // 'buyer' or 'seller'
+            buyerEmail: matchObj.demand["買家Email"],
             sellerItemCode: matchObj.sellerItem["物件ID"],
             demandId: matchObj.demand["需求項目ID"]
         };
@@ -650,99 +819,66 @@
         }
     }
 
-    // --- 【Chapter 2】賣方智慧上架艙 (Seller Launchpad) ---
-    async function parseSellerMedia() {
-        const fileInput = document.getElementById('sellerMedia');
-        if(!fileInput.files.length) return showToast("請喚醒相機錄影或上傳圖片", true);
-        
-        document.getElementById('btnParseSellerMedia').disabled = true;
-        document.getElementById('btnParseSellerMedia').innerText = "AI 視覺解構與暗箱注入中...";
-        
-        let b64 = null;
-        const reader = new FileReader();
-        b64 = await new Promise(r => { reader.onload = () => r(reader.result); reader.readAsDataURL(fileInput.files[0]); });
-        
-        // 此處調用與買方相同的後端端點進行擴充解析
-        const res = await callBackend('aiParseSellerItem', { imageB64: b64 });
-        
-        document.getElementById('btnParseSellerMedia').disabled = false;
-        document.getElementById('btnParseSellerMedia').innerText = "AI 視覺解構與暗箱注入";
+    // --- 【Chapter 5】現場電子簽名核銷 (The Final Dotpoint) ---
+    let signCanvas, signCtx, isDrawing = false;
+    let currentCheckoutPayload = {};
 
-        if(res) {
-            // 自動填入實體欄位
-            document.getElementById('sellerL').value = res.L || "";
-            document.getElementById('sellerW').value = res.W || "";
-            document.getElementById('sellerH').value = res.H || "";
-            
-            // 暗箱注入隱藏欄位
-            document.getElementById('sellerAiCategory').value = res.category || "";
-            document.getElementById('sellerAiItem').value = res.item || "";
-            document.getElementById('sellerAiName').value = res.name || "";
-            document.getElementById('sellerAiColor').value = res.color || "";
-            document.getElementById('sellerAiMaterial').value = res.material || "";
-            document.getElementById('sellerAiConditionStr').value = res.conditionStr || "";
-            document.getElementById('sellerAiStory').value = res.story || "";
-            document.getElementById('sellerAiCO2').value = res.co2 || "15";
-            document.getElementById('sellerAiIkeaDiff').value = res.ikeaDiff || "1200";
+    function initCanvas() {
+        signCanvas = document.getElementById('signPad');
+        if(!signCanvas) return;
+        signCtx = signCanvas.getContext('2d');
+        signCtx.strokeStyle = "#111111";
+        signCtx.lineWidth = 2;
+        signCtx.lineCap = "round";
 
-            // 計算清運防虧損提示
-            const clearanceFee = res.clearanceFee || 1500;
-            const msgBox = document.getElementById('lossAversionMsg');
-            msgBox.innerHTML = `[! 利益精算預警] 若未能順利售出，您將倒貼 $${clearanceFee} 的清運費！順利賣出現省清運費，還多賺售價！`;
-            msgBox.style.display = 'block';
-
-            showToast("AI 辨識完成，已暗箱注入惜物文案與公分數據");
-        }
-    }
-
-    async function submitSellerItem() {
-        const price = parseInt(document.getElementById('sellerPrice').value);
-        if(isNaN(price) || price < 10 || price > 2000) return showToast("限價防線阻斷：售價請設定於 $10 ~ $2000 之間", true);
-        
-        const addr = document.getElementById('sellerAddress').value.trim();
-        const deadline = document.getElementById('sellerDeadline').value;
-        if(!addr || !deadline) return showToast("取件地址與死線日期不可空白", true);
-
-        // 收集欄位
-        const payload = {
-            email: appData.user.email,
-            aiCategory: document.getElementById('sellerAiCategory').value,
-            aiItem: document.getElementById('sellerAiItem').value,
-            aiName: document.getElementById('sellerAiName').value,
-            aiColor: document.getElementById('sellerAiColor').value,
-            aiMaterial: document.getElementById('sellerAiMaterial').value,
-            aiConditionStr: document.getElementById('sellerAiConditionStr').value,
-            aiStory: document.getElementById('sellerAiStory').value,
-            aiCO2: document.getElementById('sellerAiCO2').value,
-            aiIkeaDiff: document.getElementById('sellerAiIkeaDiff').value,
-            clearanceFee: 1500, // Fallback防線
-            L: document.getElementById('sellerL').value,
-            W: document.getElementById('sellerW').value,
-            H: document.getElementById('sellerH').value,
-            price: price,
-            discount: document.getElementById('sellerDiscount').value,
-            condition: document.getElementById('sellerCondition').value,
-            address: addr,
-            deadline: deadline,
-            dismantle: document.getElementById('sellerDismantle').value,
-            stairs: document.getElementById('sellerStairs').value,
-            helpDismantle: document.getElementById('sellerHelpDismantle').value,
-            helpMove: document.getElementById('sellerHelpMove').value
+        const getPos = (e) => {
+            const rect = signCanvas.getBoundingClientRect();
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            return { x: clientX - rect.left, y: clientY - rect.top };
         };
 
-        document.getElementById('btnSubmitSeller').disabled = true;
-        const res = await callBackend('saveSellerItem', payload);
-        document.getElementById('btnSubmitSeller').disabled = false;
+        signCanvas.addEventListener('mousedown', (e) => { isDrawing = true; const p = getPos(e); signCtx.beginPath(); signCtx.moveTo(p.x, p.y); });
+        signCanvas.addEventListener('mousemove', (e) => { if(isDrawing) { const p = getPos(e); signCtx.lineTo(p.x, p.y); signCtx.stroke(); }});
+        signCanvas.addEventListener('mouseup', () => { isDrawing = false; signCtx.closePath(); });
+        
+        signCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); isDrawing = true; const p = getPos(e); signCtx.beginPath(); signCtx.moveTo(p.x, p.y); });
+        signCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); if(isDrawing) { const p = getPos(e); signCtx.lineTo(p.x, p.y); signCtx.stroke(); }});
+        signCanvas.addEventListener('touchend', () => { isDrawing = false; signCtx.closePath(); });
+    }
 
+    function clearSignPad() { if(signCtx) signCtx.clearRect(0, 0, signCanvas.width, signCanvas.height); }
+
+    function openSignModal(itemCode, buyerId, buyerName) {
+        currentCheckoutPayload = { itemCode, buyerId, buyerName };
+        document.getElementById('signBuyerName').innerText = buyerName;
+        document.getElementById('signModal').style.display = 'flex';
+        clearSignPad();
+    }
+
+    function closeSignModal() { document.getElementById('signModal').style.display = 'none'; }
+
+    async function submitSignature() {
+        // 取得畫布 Base64
+        const dataUrl = signCanvas.toDataURL("image/png");
+        document.getElementById('btnSubmitSign').disabled = true;
+        document.getElementById('btnSubmitSign').innerText = "核銷加密傳輸中...";
+
+        const payload = { ...currentCheckoutPayload, signatureB64: dataUrl, sellerEmail: appData.user.email };
+        const res = await callBackend('completeDeliveryAndSign', payload);
+        
+        document.getElementById('btnSubmitSign').disabled = false;
+        document.getElementById('btnSubmitSign').innerText = "● 確定點交無誤，執行核銷建案";
+        
         if(res) {
-            showToast("上架成功！已入庫並開始精算曝光");
-            // 清空表單
-            ['sellerPrice','sellerDiscount','sellerAddress','sellerDeadline','sellerL','sellerW','sellerH'].forEach(id=>document.getElementById(id).value='');
-            document.getElementById('lossAversionMsg').style.display = 'none';
+            showToast("核銷完成！黑貓Pay待撥款通知已發送");
+            closeSignModal();
+            // 重整賣家視角畫面
+            loadSellerMatches();
         }
     }
 
-    // --- 【Chapter 3】591式智慧成交大廳 (Match Lobby) ---
+    // --- 【成交大廳】保持不變 ---
     function toggleLobbyFilter(el) {
         document.querySelectorAll('.lobby-toggle').forEach(t => {
             t.classList.remove('active');
@@ -822,7 +958,7 @@
         }
     }
 
-    // --- 會員專區 (保留不變) ---
+    // --- 【會員專區】與二審擴充 ---
     function renderProfileZone(profile) {
         const area = document.getElementById('profileFieldsArea'); area.innerHTML = '';
         let codeKey = Object.keys(profile).find(k => k.includes("對話代碼"));
@@ -833,11 +969,27 @@
         ];
         fields.forEach(f => { area.innerHTML += `<div style="margin-bottom:10px;"><label>${f.label}</label><input type="text" id="${f.id||''}" value="${f.val||''}" disabled class="profile-inputs"></div>`; });
     }
+    
     function toggleProfileEdit() {
         isProfileEditing = !isProfileEditing;
         document.querySelectorAll('.profile-inputs[id]').forEach(i => i.disabled = !isProfileEditing);
         document.getElementById('btnToggleProfileEdit').innerText = isProfileEditing ? "鎖定並放棄更動" : "解鎖個人檔案";
         document.getElementById('btnSaveProfile').style.display = isProfileEditing ? 'block' : 'none';
+    }
+
+    async function uploadTier2Docs() {
+        // 模擬上傳與標記
+        const files = [document.getElementById('profIdFront'), document.getElementById('profIdBack'), document.getElementById('profBank')];
+        if(!files[0].files.length || !files[1].files.length || !files[2].files.length) {
+            return showToast("請完整提供正反面與帳戶封面", true);
+        }
+        
+        document.getElementById('btnUploadDocs').disabled = true;
+        const res = await callBackend('uploadTier2Docs', { email: appData.user.email });
+        if(res) {
+            showToast("證件與存摺二審上傳完畢，金流解鎖！");
+        }
+        document.getElementById('btnUploadDocs').disabled = false;
     }
 </script>
 </body>
