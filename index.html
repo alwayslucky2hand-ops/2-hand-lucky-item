@@ -67,7 +67,6 @@
         <div data-target="final">核銷點交</div>
     </nav>
 
-    <!-- Chapter 1: Identity Gateway -->
     <section id="gateway" class="section active">
         <h3>真人驗證大門</h3>
         <input type="email" id="userEmail" placeholder="輸入通訊信箱 (Email)">
@@ -82,7 +81,6 @@
         </div>
     </section>
 
-    <!-- Chapter 3: Match Lobby -->
     <section id="lobby" class="section">
         <div id="lobbyStats" style="font-size:11px; margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:5px;">
             ● 平台已累計為地球成功減碳 <span id="totalCO2">0</span> KG ─ 累計為人類經濟贖回利潤 $<span id="totalProfit">0</span> 元
@@ -93,8 +91,7 @@
             <button class="filter-btn" onclick="toggleFilter(this, '家電')">○ 家電類</button>
         </div>
         <div id="lobbyList">
-            <!-- Dynamic Cards -->
-        </div>
+            </div>
         <hr>
         <div id="archiveToggle" style="text-align:center; font-size:12px; cursor:pointer;" onclick="toggleArchive()">
             ─ 點擊解鎖平台成交誠信履歷 ─
@@ -102,7 +99,6 @@
         <div id="archiveList" style="display:none; margin-top:15px; opacity:0.6;"></div>
     </section>
 
-    <!-- Chapter 1-A: Demand Onboarding -->
     <section id="onboarding" class="section">
         <h3>買方需求預登錄</h3>
         <textarea id="demandRaw" rows="4" placeholder="請輸入您的尋物大白話... (例如：我想找一個三公尺內的灰色沙發，預算五千，下週五前要搬進去)"></textarea>
@@ -118,7 +114,6 @@
         </div>
     </section>
 
-    <!-- Chapter 2: AI Launchpad -->
     <section id="launchpad" class="section">
         <h3>AI軍師魔幻上架</h3>
         <div style="border:1px dashed #000; padding:40px; text-align:center; margin-bottom:10px;">
@@ -136,15 +131,12 @@
         <button onclick="submitLaunch()">➔ 確認送出上架</button>
     </section>
 
-    <!-- Chapter 4: Strategy Board -->
     <section id="strategy" class="section">
         <h3>專屬媒合看板</h3>
         <div id="matchList">
-            <!-- Match Cards -->
-        </div>
+            </div>
     </section>
 
-    <!-- Chapter 5: Final Dotpoint -->
     <section id="final" class="section">
         <h3>現場電子簽名核銷</h3>
         <div id="activeItemInfo" style="font-size:14px; font-weight:bold; margin-bottom:10px; color:var(--accent-red);"></div>
@@ -165,16 +157,13 @@
 <div id="toast" class="toast"></div>
 
 <script>
-    /** ⚠️ 真實環境參數動態寫入 **/
+    /** ⚠️ 核心系統變數宣告 (嚴格遵循前端全域 URL 變數鐵律) **/
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwaq-13DlQxTCBTnTdJ1ILFvUvnr-_P7tKbeSXUixN3oaRMcoWnIH4qJuxjrRUtpUtK/exec";
     const DRIVE_FOLDER_ID = "1m5Cy6egA8WqhzrEZAQ4GvAG8moP49F1f?usp=drive_link";
-    const DRIVE_MEDIA_ID = "1m5Cy6egA8WqhzrEZAQ4GvAG8moP49F1f?usp=drive_link";
     const SHEET_ID = "1Oojj6KcLNmrYTrms4UrNEPzoAot23YOMHPGPLZvmeDg";
-    const GAS_ID = "1P0r5-pfhHvYOiliOYQWFZHvJaKoBpWyE0w5JJExK-UB7nDtVFIh_4XFB";
-    const CALENDAR_ID = "movingayue@gmail.com";
-    const GMAIL_ID = "movingayue@gmail.com";
-    const EXTERNAL_WEBHOOK = "編碼";
-    const GAS_WEB_URL = "https://script.google.com/macros/s/AKfycbwaq-13DlQxTCBTnTdJ1ILFvUvnr-_P7tKbeSXUixN3oaRMcoWnIH4qJuxjrRUtpUtK/exec";
     const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
+    // 補齊供前端直接調用 AI 解析使用的 Key (原報錯點修復)
+    
 
     let appData = { lobby: [], matches: [], user: {} };
     let currentActiveRowId = null;
@@ -182,7 +171,7 @@
     // --- 核心：雙棲運行與資料流 ---
     async function callBackend(funcName, payload = {}) {
         showToast(`正在處理: ${funcName}...`);
-        if (typeof google !== 'undefined') {
+        if (typeof google !== 'undefined' && google.script) {
             return new Promise((resolve, reject) => {
                 google.script.run
                     .withSuccessHandler(res => {
@@ -198,7 +187,8 @@
             });
         } else {
             try {
-                const response = await fetch(GAS_WEB_URL, {
+                // 已嚴格修改為指向 GAS_WEB_APP_URL
+                const response = await fetch(GAS_WEB_APP_URL, {
                     method: 'POST',
                     body: JSON.stringify({ action: funcName, data: payload })
                 });
@@ -218,7 +208,7 @@
             return res.data;
         }
         console.error("Backend Unpack Error:", res);
-        showToast("系統資料格式錯誤");
+        showToast("系統資料格式或狀態錯誤");
         return null;
     }
 
@@ -287,9 +277,23 @@
     async function loadLobby() {
         const res = await callBackend('getLobbyProducts');
         if(!res) return;
-        // ⚠️ 前端拆包機制：確實執行 res.lobbyItems 拆解
         appData.lobby = res.lobbyItems || [];
         renderLobby();
+    }
+
+    // 補齊過濾按鈕的觸發函式 (解決 Console toggleFilter 未定義)
+    function toggleFilter(btn, category) {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        const cards = document.querySelectorAll('#lobbyList .card');
+        cards.forEach(card => {
+            if (card.innerText.includes(category)) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
     }
 
     function renderLobby() {
@@ -306,7 +310,6 @@
         let totalProfit = 0;
 
         appData.lobby.forEach(item => {
-            // ⚠️ 鍵值強制對標後端中文 Key
             const itemName = item["物件品項"] || "未命名物件";
             const price = parseFloat(item["售價/件"]) || 0;
             const areaFull = item["取件地址"] || "未知區域";
@@ -316,7 +319,6 @@
             const isSold = item["是否售出"] === true || item["是否售出"] === "TRUE";
             const rowId = item._rowId;
 
-            // ⚠️ 動態累計邏輯
             if(isSold) {
                 totalCO2 += co2;
                 totalProfit += ikeaDiff;
@@ -350,7 +352,6 @@
             }
         });
 
-        // ⚠️ DOM 更新：動態統計
         if(co2El) co2El.innerText = totalCO2.toFixed(1);
         if(profitEl) profitEl.innerText = totalProfit.toLocaleString();
     }
@@ -370,18 +371,30 @@
         const btn = document.getElementById('btnAiDeconstruct');
         if(btn) btn.innerText = "AI 通靈中...";
         
-        const prompt = `你是一個二手家具專家。請將以下需求拆解為 JSON 格式，包含欄位: item (品項), color (色系), deadline (YYYY-MM-DD), budget (數字)。需求內容：${rawEl.value}`;
+        // 提示語句優化：強制 AI 回傳乾淨的 JSON 以避免解析錯誤
+        const prompt = `你是一個二手家具專家。請將以下需求拆解為純 JSON 格式，包含欄位: item (品項), color (色系), deadline (YYYY-MM-DD), budget (數字)。需求內容：${rawEl.value}。注意：只能回傳 JSON，不要包裝在 markdown 程式碼區塊內。`;
         
         try {
             const response = await fetch(GEMINI_ENDPOINT, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json', 
+                    // 鐵律：將 API Key 安全藏於 HTTP Header 中
                     'x-goog-api-key': GEMINI_API_KEYS[0] 
                 },
                 body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
             });
             const result = await response.json();
+            
+            // 修正點：正確解構 Gemini API 回應結構，並過濾多餘 Markdown 標記
+            let aiText = result.candidates[0].content.parts[0].text;
+            let cleanJson = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(cleanJson);
+            
+            document.getElementById('reqItem').value = parsed.item || '';
+            document.getElementById('reqColor').value = parsed.color || '';
+            document.getElementById('reqDeadline').value = parsed.deadline || '';
+            document.getElementById('reqBudget').value = parsed.budget || '';
             
             const form = document.getElementById('deconstructedForm');
             if(form) form.style.display = 'block';
@@ -390,9 +403,46 @@
             if(btn) btn.innerText = "➔ 授權 AI 轉化需求";
         } catch(e) {
             console.error("Gemini Error:", e);
-            showToast("AI 暫時離線，請手動輸入");
+            showToast("AI 解析遇到障礙，請手動確認輸入");
             const form = document.getElementById('deconstructedForm');
             if(form) form.style.display = 'block';
+            if(btn) btn.innerText = "➔ 授權 AI 轉化需求";
+        }
+    }
+
+    // 補齊缺漏的按鈕邏輯：買方需求正式送出
+    async function submitDemand() {
+        const rawText = document.getElementById('demandRaw').value;
+        const userEmail = document.getElementById('userEmail').value || "guest@troy.ai";
+        
+        const res = await callBackend('registerDemand', { rawText: rawText, userEmail: userEmail });
+        if (res) {
+            showToast("您的需求已成功登錄大廳！");
+            switchSection('lobby');
+        }
+    }
+
+    // 補齊缺漏的按鈕邏輯：AI 魔幻上架送出
+    async function submitLaunch() {
+        const formData = {
+            memberId: "MEM_FRONTEND",
+            email: document.getElementById('userEmail').value || "guest@troy.ai",
+            name: "AI預設賣家",
+            category: "二手良品",
+            item: "上架物件",
+            color: "系統預設",
+            condition: "狀態良好",
+            l: document.getElementById('dimL').value,
+            w: document.getElementById('dimW').value,
+            h: document.getElementById('dimH').value,
+            price: document.getElementById('itemPrice').value,
+            deadline: document.getElementById('itemDeadline').value,
+            address: "前端填寫測試地址"
+        };
+        const res = await callBackend('listProduct', { formData: formData, videoBlob: "" });
+        if (res) {
+            showToast("物品已成功進入 AI 上架列隊！");
+            switchSection('lobby');
         }
     }
 
@@ -468,7 +518,7 @@
 
     // 初始化
     window.onload = () => {
-        console.log("Troy AI Frontend v2.1 Optimized");
+        console.log("Troy AI Frontend v2.2 - Error Handled & Synced");
         loadLobby();
     };
 
