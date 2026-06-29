@@ -251,17 +251,97 @@
         "台中市": ["中區","東區","南區","西區","北區","北屯區","西屯區","南屯區","太平區","大里區","霧峰區","烏日區","豐原區","后里區","石岡區","東勢區","和平區","新社區","潭子區","大雅區","神岡區","大肚區","沙鹿區","龍井區","梧棲區","清水區","大甲區","外埔區","大安區"],
         "台南市": ["中西區","東區","南區","北區","安平區","安南區","永康區","歸仁區","新化區","左鎮區","玉井區","楠西區","南化區","仁德區","關廟區","龍崎區","官田區","麻豆區","佳里區","西港區","七股區","將軍區","學甲區","北門區","新營區","後壁區","白河區","東山區","六甲區","下營區","柳營區","鹽水區","善化區","大內區","山上區","新市區","安定區"],
         "高雄市": ["楠梓區","左營區","鼓山區","三民區","鹽埕區","前金區","新興區","苓雅區","前鎮區","旗津區","小港區","鳳山區","林園區","大寮區","大樹區","大社區","仁武區","鳥松區","岡山區","橋頭區","燕巢區","田寮區","阿蓮區","路竹區","湖內區","茄萣區","永安區","彌陀區","梓官區","旗山區","美濃區","六龜區","甲仙區","杉林區","內門區","茂林區","桃源區","那瑪夏區"]
-        // 可依需求補齊其他縣市，此為示範核心都會區
     };
 
     let appData = { lobby: [], myDemands: [], matches: [], user: { email: "", fullProfile: null }, currentMatchFilter: 'broad' };
     let isProfileEditing = false;
     let savedAddresses = [];
 
+    // --- LocalStorage 自動儲存與恢復機制 ---
+    function saveDraft() {
+        const draft = {
+            id: document.getElementById('reqId').value,
+            type: document.getElementById('reqType').value,
+            item: document.getElementById('reqItem').value,
+            color: document.getElementById('reqColor').value,
+            condition: document.getElementById('reqCondition').value,
+            qty: document.getElementById('reqQty').value,
+            deadline: document.getElementById('reqDeadline').value,
+            city: document.getElementById('reqCity').value,
+            dist: document.getElementById('reqCityDist').value,
+            road: document.getElementById('reqRoad').value,
+            street: document.getElementById('reqStreet').value,
+            alley: document.getElementById('reqAlley').value,
+            number: document.getElementById('reqNumber').value,
+            floor: document.getElementById('reqFloor').value,
+            room: document.getElementById('reqRoom').value,
+            notes: document.getElementById('reqNotes').value,
+            aiText: document.getElementById('aiDemandText').value
+        };
+        localStorage.setItem('troy_draft_demand', JSON.stringify(draft));
+    }
+
+    function loadDraft() {
+        const draftStr = localStorage.getItem('troy_draft_demand');
+        if(draftStr) {
+            try {
+                const draft = JSON.parse(draftStr);
+                document.getElementById('reqId').value = draft.id || "";
+                document.getElementById('reqType').value = draft.type || "";
+                document.getElementById('reqItem').value = draft.item || "";
+                document.getElementById('reqColor').value = draft.color || "";
+                document.getElementById('reqCondition').value = draft.condition || "不拘";
+                document.getElementById('reqQty').value = draft.qty || "1";
+                document.getElementById('reqDeadline').value = draft.deadline || "";
+                document.getElementById('reqRoad').value = draft.road || "";
+                document.getElementById('reqStreet').value = draft.street || "";
+                document.getElementById('reqAlley').value = draft.alley || "";
+                document.getElementById('reqNumber').value = draft.number || "";
+                document.getElementById('reqFloor').value = draft.floor || "1";
+                document.getElementById('reqRoom').value = draft.room || "";
+                document.getElementById('reqNotes').value = draft.notes || "";
+                document.getElementById('aiDemandText').value = draft.aiText || "";
+
+                if(draft.city && TW_DATA[draft.city]) {
+                    document.getElementById('reqCity').value = draft.city;
+                    updateDistricts();
+                    if(draft.dist) document.getElementById('reqCityDist').value = draft.dist;
+                }
+            } catch(e){}
+        }
+    }
+
+    // --- 頁面初始化與綁定 ---
+    window.onload = () => {
+        initAddressDropdowns();
+
+        // 綁定輸入即時儲存草稿
+        document.querySelectorAll('#viewAddDemand input, #viewAddDemand select, #viewAddDemand textarea').forEach(el => {
+            el.addEventListener('input', saveDraft);
+            el.addEventListener('change', saveDraft);
+        });
+
+        // 檢查登入狀態恢復
+        const savedProfile = localStorage.getItem('troy_user_profile');
+        if (savedProfile) {
+            try {
+                const profile = JSON.parse(savedProfile);
+                if (profile && profile["會員Email"]) {
+                    appData.user.email = profile["會員Email"];
+                    unlockPlatform(profile);
+                    loadDraft(); // 登入成功後載入剛才打到一半的草稿
+                }
+            } catch(e) {}
+        }
+    };
+
     // --- 初始化 UI ---
     function initAddressDropdowns() {
         const citySelect = document.getElementById('reqCity');
-        Object.keys(TW_DATA).forEach(city => { citySelect.add(new Option(city, city)); });
+        // 避免重複加入
+        if(citySelect.options.length <= 1) {
+            Object.keys(TW_DATA).forEach(city => { citySelect.add(new Option(city, city)); });
+        }
     }
     function updateDistricts() {
         const city = document.getElementById('reqCity').value;
@@ -318,9 +398,11 @@
 
     function unlockPlatform(profile) {
         appData.user.fullProfile = profile;
+        appData.user.email = profile["會員Email"];
+        localStorage.setItem('troy_user_profile', JSON.stringify(profile)); // 永續儲存登入狀態
+        
         document.getElementById('gateway').style.display = 'none'; document.getElementById('mainNav').style.display = 'flex';
         
-        // 解決對話代碼因為 \n 抓不到的問題，用模糊比對 keys
         let codeKey = Object.keys(profile).find(k => k.includes("對話代碼"));
         
         document.getElementById('guName').innerText = profile["會員姓名"] || "";
@@ -369,6 +451,7 @@
             });
             if(res.city && TW_DATA[res.city]) { document.getElementById('reqCity').value = res.city; updateDistricts(); if(res.town) document.getElementById('reqCityDist').value = res.town; }
             showToast("AI 辨識完成，請確認表單");
+            saveDraft(); // AI 填寫完畢後立即觸發一次草稿儲存
         }
     }
 
@@ -377,6 +460,7 @@
             document.getElementById(id).value = ""; document.getElementById(id).classList.remove('error-field');
         });
         document.getElementById('reqCondition').value = "不拘"; document.getElementById('reqQty').value = "1"; document.getElementById('reqFloor').value = "1";
+        localStorage.removeItem('troy_draft_demand'); // 清除本地草稿緩存
     }
 
     function validateAddress() {
@@ -415,7 +499,11 @@
         document.getElementById('btnSaveDemand').disabled = true;
         const res = await callBackend('saveBuyerDemand', { demand: payload });
         document.getElementById('btnSaveDemand').disabled = false;
-        if(res) { showToast("需求已成功送出！"); clearDemandForm(); loadMyDemands(); }
+        if(res) { 
+            showToast("需求已成功送出！"); 
+            clearDemandForm(); // 這會連帶清除 localStorage
+            loadMyDemands(); 
+        }
     }
 
     async function loadMyDemands() {
@@ -423,12 +511,11 @@
         const res = await callBackend('getBuyerDemands', { email: appData.user.email });
         if(res) {
             appData.myDemands = res.demands || []; list.innerHTML = "";
-            savedAddresses = []; // Update history
+            savedAddresses = []; 
             
             if(appData.myDemands.length === 0) return list.innerHTML = "<div style='color:var(--text-muted);'>目前無需求紀錄。</div>";
             
             appData.myDemands.forEach(d => {
-                // Collect unique addresses for history dropdown
                 const addrStr = JSON.stringify({ c:d["所在地縣市"], t:d["所在地鄉鎮區村"], r:d["所在地路段"], s:d["所在地街道"], a:d["所在地巷弄"], n:d["所在地號碼"], f:d["所在地樓層與室號"] });
                 if(!savedAddresses.some(sa => sa.str === addrStr)) savedAddresses.push({ str: addrStr, raw: d });
 
@@ -443,7 +530,6 @@
                     </div>`;
             });
 
-            // Update history select
             const sel = document.getElementById('historyAddressSelect');
             sel.innerHTML = '<option value="">載入歷史地址...</option>';
             savedAddresses.forEach((sa, i) => { sel.add(new Option(`${sa.raw["所在地縣市"]}${sa.raw["所在地鄉鎮區村"]}...`, i)); });
@@ -461,9 +547,10 @@
         document.getElementById('reqRoad').value = d["所在地路段"]; document.getElementById('reqStreet').value = d["所在地街道"];
         document.getElementById('reqAlley').value = d["所在地巷弄"]; document.getElementById('reqNumber').value = d["所在地號碼"];
         
-        const fAndR = (d["所在地樓層與室號"]||"").split('-'); // 假設後端存成 樓層-室號
+        const fAndR = (d["所在地樓層與室號"]||"").split('-'); 
         document.getElementById('reqFloor').value = fAndR[0] || "1"; document.getElementById('reqRoom').value = fAndR[1] || "";
         showToast("已載入歷史地址");
+        saveDraft(); // 載入後觸發自動存檔
     }
 
     function editDemand(d) {
@@ -478,6 +565,7 @@
         document.getElementById('reqAlley').value = d["所在地巷弄"]; document.getElementById('reqNumber').value = d["所在地號碼"];
         const fAndR = (d["所在地樓層與室號"]||"").split('-'); document.getElementById('reqFloor').value = fAndR[0] || "1"; document.getElementById('reqRoom').value = fAndR[1] || "";
         window.scrollTo({ top: 0, behavior: 'smooth' }); showToast("已載入編輯模式");
+        saveDraft(); // 載入後觸發自動存檔
     }
 
     async function deleteDemand(id) {
