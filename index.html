@@ -54,9 +54,6 @@
         .review-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         .review-table th, .review-table td { border: 1px solid var(--border-color); padding: 8px; font-size: 13px; text-align: left; vertical-align: middle; }
         .review-table th { background: #f2f2f2; width: 35%; }
-        .checkmark-status { font-size: 11px; font-weight: bold; display: block; margin-top: 4px; }
-        .status-ok { color: var(--accent-green); }
-        .status-err { color: var(--accent-red); }
 
         .camera-container {
             position: relative; width: 100%; height: 350px; background: #000; overflow: hidden; margin-bottom: 15px;
@@ -69,16 +66,10 @@
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             color: #ffffff; font-size: 13px; text-align: center; width: 90%; z-index: 5; line-height: 1.5;
         }
-        
         .scan-overlay-face {
             position: absolute; width: 60%; height: 70%; border: 2px dashed var(--accent-green); border-radius: 50%;
             top: 15%; left: 20%; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,0.4);
             display: flex; align-items: flex-end; justify-content: center; padding-bottom: 20px; color: var(--accent-green); font-size: 12px; font-weight: bold; z-index: 10;
-        }
-        .scan-overlay-doc {
-            position: absolute; width: 85%; height: 60%; border: 3px solid var(--accent-red); border-radius: 8px;
-            top: 20%; left: 7.5%; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,0.6);
-            display: flex; align-items: center; justify-content: center; color: var(--accent-red); font-size: 14px; font-weight: bold; text-shadow: 1px 1px 2px #000; z-index: 10;
         }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -119,14 +110,14 @@
         </div>
 
         <div id="authStepLoginCheck" class="auth-step">
-            <p style="font-size: 13px; color: red; font-weight: bold;">[安全防護] 偵測到您為開通會員。請回答當初留存的三項個人檔案進行對碰：</p>
+            <p style="font-size: 13px; color: red; font-weight: bold;">[安全防護] 偵測到您為開通會員。請回答當初留存的資料進行對碰：</p>
             <div id="loginQuestionArea"></div>
             <button onclick="submitLoginQuestions()">● 送出資料比對登入</button>
         </div>
 
         <div id="authStepManualForm" class="auth-step">
-            <p style="font-size: 13px; color: blue; font-weight: bold;">[階段 1/3：基本資料建檔]</p>
-            <p style="font-size: 11px; color: #666;">請確實填寫，後續的 AI 錄影與證件驗證將以此資料進行嚴格交叉對碰。</p>
+            <p style="font-size: 13px; color: blue; font-weight: bold;">[階段 1/2：基本資料建檔]</p>
+            <p style="font-size: 11px; color: #666;">請確實填寫，後續的 AI 錄影將以此資料進行嚴格交叉對碰。</p>
             <input type="text" id="manName" placeholder="真實姓名 (例：陳小明)">
             <input type="text" id="manPhone" placeholder="10位數通訊電話 (例：0912345678)" maxlength="10">
             <input type="text" id="manDob" placeholder="8位數西元生日 (例：19900101)" maxlength="8">
@@ -135,11 +126,12 @@
         </div>
 
         <div id="authStepVideo" class="auth-step">
-            <p style="font-size: 13px; color: blue; font-weight: bold;">[階段 2/3：AI 活體影音防偽比對]</p>
+            <p style="font-size: 13px; color: blue; font-weight: bold;">[階段 2/2：AI 活體影音防偽比對]</p>
             <div style="background: #f9f9f9; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; font-size: 12px; line-height:1.4;">
                 <strong style="color:var(--accent-red);">請將臉部對準綠框，並清楚唸出您剛才輸入的資訊：</strong><br>
-                “我的生日是 <span id="promptDob" style="font-weight:bold; background:yellow;"></span>，<br>
-                電話號碼是 <span id="promptPhone" style="font-weight:bold; background:yellow;"></span>，<br>
+                “我是 <span id="promptName" style="font-weight:bold; background:yellow;"></span>，<br>
+                生日是 <span id="promptDob" style="font-weight:bold; background:yellow;"></span>，<br>
+                電話是 <span id="promptPhone" style="font-weight:bold; background:yellow;"></span>，<br>
                 身分證字號為 <span id="promptIdNum" style="font-weight:bold; background:yellow;"></span>”
             </div>
             
@@ -156,29 +148,9 @@
             <button onclick="processVideoMatch()" id="btnProcessVideo" style="display:none; background:var(--primary-black); color:#fff;">➔ 授權 AI 嚴格比對錄音內容</button>
         </div>
 
-        <div id="authStepIdCard" class="auth-step">
-            <p style="font-size: 13px; color: blue; font-weight: bold;">[階段 3/3：實體證件防偽比對]</p>
-            <p style="font-size: 11px; color: #444;">支援相機現拍或相片上傳。AI 將提取文字與您輸入的資料進行 1:1 最終對碰。</p>
-            
-            <div style="display:flex; gap:10px; margin-bottom:15px;">
-                <div style="flex:1; border:1px dashed #000; padding:15px; text-align:center; cursor:pointer; background:#fff;" onclick="document.getElementById('idFrontFile').click()">
-                    <span style="font-size:24px;">📸</span><br><strong style="font-size:12px;">上傳/拍攝 正面</strong>
-                    <input type="file" id="idFrontFile" accept="image/*" style="display:none;" onchange="handleIdFile('front', this)">
-                    <div id="frontStatus" style="font-size:10px; color:green; margin-top:5px; display:none;">✅ 已選取</div>
-                </div>
-                <div style="flex:1; border:1px dashed #000; padding:15px; text-align:center; cursor:pointer; background:#fff;" onclick="document.getElementById('idBackFile').click()">
-                    <span style="font-size:24px;">📸</span><br><strong style="font-size:12px;">上傳/拍攝 反面</strong>
-                    <input type="file" id="idBackFile" accept="image/*" style="display:none;" onchange="handleIdFile('back', this)">
-                    <div id="backStatus" style="font-size:10px; color:green; margin-top:5px; display:none;">✅ 已選取</div>
-                </div>
-            </div>
-
-            <button onclick="processIdMatch()" id="btnProcessId" style="background:var(--primary-black); color:#fff; display:none;">➔ 授權 AI 視覺對碰證件與資料</button>
-        </div>
-
         <div id="authStepReview" class="auth-step">
-            <p style="font-size: 14px; color: green; font-weight: bold;">✔ AI 雙重對碰防偽辨識完畢！歡迎加入特洛伊：</p>
-            <p style="font-size: 11px; color: #666;">您的資料已與錄影口白及證件達成 100% 完美匹配。</p>
+            <p style="font-size: 14px; color: green; font-weight: bold;">✔ AI 影音防偽辨識完畢！歡迎加入特洛伊：</p>
+            <p style="font-size: 11px; color: #666;">您的基底資料已與錄影口白達成 100% 完美匹配。</p>
             <table class="review-table">
                 <tbody id="reviewTableBody">
                     </tbody>
@@ -219,7 +191,7 @@
     /** ⚠️ 硬編碼與全域資料快取區 **/
     let appData = { lobby: [], matches: [], user: { email: "" } };
     let currentActiveRowId = null;
-    let tempRegisterCache = { name: "", phone: "", dob: "", idNum: "", videoB64: "", spokenText: "", idFrontB64: "", idBackB64: "" }; 
+    let tempRegisterCache = { name: "", phone: "", dob: "", idNum: "", videoB64: "", spokenText: "" }; 
     let isProfileEditing = false;
 
     let currentStream = null;
@@ -313,6 +285,7 @@
                 Object.assign(tempRegisterCache, res.savedData);
                 
                 // 動態渲染提詞機
+                if(tempRegisterCache.name) document.getElementById('promptName').innerText = tempRegisterCache.name;
                 if(tempRegisterCache.dob) document.getElementById('promptDob').innerText = tempRegisterCache.dob;
                 if(tempRegisterCache.phone) document.getElementById('promptPhone').innerText = tempRegisterCache.phone;
                 if(tempRegisterCache.idNum) document.getElementById('promptIdNum').innerText = tempRegisterCache.idNum;
@@ -363,6 +336,7 @@
 
         if(res) {
             Object.assign(tempRegisterCache, data);
+            document.getElementById('promptName').innerText = data.name;
             document.getElementById('promptDob').innerText = data.dob;
             document.getElementById('promptPhone').innerText = data.phone;
             document.getElementById('promptIdNum').innerText = data.idNum;
@@ -424,71 +398,27 @@
         if(!spokenText || !tempRegisterCache.videoB64) return showToast("口白缺失，請重新錄影填寫");
         
         document.getElementById('btnProcessVideo').disabled = true;
-        document.getElementById('btnProcessVideo').innerText = "AI 音文跨模態交叉比對中...";
+        document.getElementById('btnProcessVideo').innerText = "AI 活體對碰中...";
 
         const res = await callBackend('processVideoMatch', { 
             email: appData.user.email, 
             videoB64: tempRegisterCache.videoB64, 
             spokenText: spokenText,
-            basicData: tempRegisterCache // 傳送第一步填寫的基底資料供AI對碰
+            basicData: tempRegisterCache 
         });
 
         document.getElementById('btnProcessVideo').disabled = false;
         document.getElementById('btnProcessVideo').innerText = "➔ 授權 AI 嚴格比對錄音內容";
 
         if(res) {
-            showToast("口白與基底資料 100% 吻合！");
-            switchAuthStep('authStepIdCard');
+            showToast("口白與基底資料吻合！");
+            renderReviewForm(tempRegisterCache);
+            switchAuthStep('authStepReview');
         } else {
             showToast("⚠️ AI 判定口述與基底資料不符，請重新錄影");
             document.getElementById('btnStartRec').style.display = 'block';
             document.getElementById('btnProcessVideo').style.display = 'none';
             document.getElementById('registerSpokenText').value = "";
-        }
-    }
-
-    // --- 階段三：身分證 OCR 視覺對碰 ---
-    async function handleIdFile(type, input) {
-        const file = input.files[0];
-        if(!file) return;
-        const b64 = await fileToBase64(file);
-        if(type === 'front') {
-            tempRegisterCache.idFrontB64 = b64;
-            document.getElementById('frontStatus').style.display = 'block';
-        } else {
-            tempRegisterCache.idBackB64 = b64;
-            document.getElementById('backStatus').style.display = 'block';
-        }
-
-        if(tempRegisterCache.idFrontB64 && tempRegisterCache.idBackB64) {
-            document.getElementById('btnProcessId').style.display = 'block';
-        }
-    }
-
-    async function processIdMatch() {
-        document.getElementById('btnProcessId').disabled = true;
-        document.getElementById('btnProcessId').innerText = "AI 視覺解析與基底對碰中...";
-
-        const res = await callBackend('processIdMatch', { 
-            email: appData.user.email, 
-            frontB64: tempRegisterCache.idFrontB64, 
-            backB64: tempRegisterCache.idBackB64,
-            basicData: tempRegisterCache
-        });
-
-        document.getElementById('btnProcessId').disabled = false;
-        document.getElementById('btnProcessId').innerText = "➔ 授權 AI 視覺對碰證件與資料";
-
-        if(res) {
-            showToast("證件解析完美吻合！");
-            renderReviewForm(tempRegisterCache);
-            switchAuthStep('authStepReview');
-        } else {
-            showToast("⚠️ AI 判定證件模糊或與輸入基底不符，請重傳");
-            tempRegisterCache.idFrontB64 = ""; tempRegisterCache.idBackB64 = "";
-            document.getElementById('frontStatus').style.display = 'none';
-            document.getElementById('backStatus').style.display = 'none';
-            document.getElementById('btnProcessId').style.display = 'none';
         }
     }
 
@@ -514,7 +444,7 @@
     }
 
     async function executeFinalRegistration() {
-        document.getElementById('btnFinalReg').innerText = "正在賦予最高權限庫...";
+        document.getElementById('btnFinalReg').innerText = "正在賦予權限庫...";
         document.getElementById('btnFinalReg').disabled = true;
 
         const res = await callBackend('executeFinalRegistration', { email: appData.user.email });
@@ -535,12 +465,15 @@
         const area = document.getElementById('profileFieldsArea');
         area.innerHTML = '';
         
-        // 核心對齊 22 欄
+        // 核心對齊 17 欄，顯示重點資訊
+        let displayPhone = String(profile["會員電話"] || "");
+        if(displayPhone.length === 9 && displayPhone.startsWith("9")) displayPhone = "0" + displayPhone;
+
         const fields = [
             { label: "會員系統內部ID", val: profile["會員ID"], editable: false },
             { label: "實名認證 Email", val: profile["會員Email"], editable: false },
             { label: "認證真實姓名", val: profile["會員姓名"], id: "profName", editable: true },
-            { label: "聯絡通訊電話", val: profile["會員電話"], id: "profPhone", editable: true },
+            { label: "聯絡通訊電話", val: displayPhone, id: "profPhone", editable: true },
             { label: "出生年月日", val: profile["出生年月日"], id: "profDob", editable: true },
             { label: "身分證號碼", val: profile["身分證號碼"], id: "profIdNum", editable: true }
         ];
