@@ -97,20 +97,30 @@
         </div>
 
         <div id="authStepRegisterInterview" class="auth-step">
-            <p style="font-size: 13px; color: blue; font-weight: bold;">[AI 真人面試] 偵測為新用戶，請配合 AI 語音指導完成錄製開通：</p>
+            <p style="font-size: 13px; color: blue; font-weight: bold;">[AI 真人面試] 偵測為新用戶，請配合 AI 指導完成身分建檔：</p>
             <div style="background: #f9f9f9; border: 1px solid #ccc; padding: 15px; margin-bottom: 10px; font-size: 13px;">
-                <strong>AI 實時提問引導：</strong>
-                <p id="aiInterviewPrompt">“歡迎加入特洛伊。請開啟鏡頭與麥克風，口述說出您的「完整真實姓名」、「常用電話」以及「您預計本平台是買二手還是賣二手？」”</p>
+                <strong>AI 實時提問引導 (請照唸)：</strong>
+                <p id="aiInterviewPrompt" style="color:var(--accent-red); font-weight:bold;">“您好！為了確保童叟無欺，請開啟鏡頭，清楚說出您的「完整真實姓名」、「常用電話」以及「預計在平台買二手還是賣二手？」”</p>
             </div>
-            <div style="border:1px solid #000; height:150px; background:#eee; display:flex; align-items:center; justify-content:center; margin-bottom:10px;">
-                <span style="font-size: 12px; color: #555;">[錄影音相機模組已就緒]</span>
+            
+            <div style="border:1px solid #000; background:#eee; position:relative; margin-bottom:10px;">
+                <video id="liveVideo" autoplay playsinline muted style="width:100%; height:200px; object-fit:cover; background:#000; display:none;"></video>
+                <div id="camPlaceholder" style="height:200px; display:flex; align-items:center; justify-content:center; color:#555; font-size:12px;">
+                    [相機待命，點擊下方按鈕啟動]
+                </div>
             </div>
-            <textarea id="registerSpokenText" rows="3" placeholder="[AI 語音動態轉文字存查] 請在此輸入或由語音辨識填入您的回答內容..."></textarea>
-            <button onclick="completeRegisterInterview()">○ 完成口語面試，下一步上傳證件</button>
+            
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <button onclick="startInterviewRecording()" id="btnStartRec" style="background:var(--accent-red); color:#fff;">● 開始錄影與辨識</button>
+                <button onclick="stopInterviewRecording()" id="btnStopRec" style="display:none;">■ 停止錄製</button>
+            </div>
+
+            <textarea id="registerSpokenText" rows="3" placeholder="[AI 語音動態轉文字] 錄音時將自動填寫，若辨識錯誤請手動修正..."></textarea>
+            <button onclick="completeRegisterInterview()">○ 確認錄音與文字無誤，下一步上傳證件</button>
         </div>
 
         <div id="authStepRegisterId" class="auth-step">
-            <p style="font-size: 13px; color: #444;">步驟四：請拍攝並上傳身分證正反面（將同步存入雲端建檔）</p>
+            <p style="font-size: 13px; color: #444;">步驟四：請拍攝並上傳身分證正反面（將與剛才的錄影口白匹配）</p>
             <div style="margin-bottom: 10px;">
                 <label style="font-size: 12px;">身分證正面照片：</label>
                 <input type="file" id="idCardFront" accept="image/*">
@@ -123,7 +133,7 @@
         </div>
 
         <div id="authStepRegisterBank" class="auth-step">
-            <p style="font-size: 13px; color: #444;">步驟五：請上傳銀行帳戶封面照片（供未來撥款使用）</p>
+            <p style="font-size: 13px; color: #444;">步驟五：請上傳銀行帳戶封面照片（供未來撥款匹配核銷使用）</p>
             <input type="file" id="bankPassbook" accept="image/*">
             <button onclick="processRegisterBank()" id="btnProcessBank">➔ 上傳存查並提取銀行資料</button>
         </div>
@@ -133,15 +143,16 @@
             <table class="review-table">
                 <tr><th>項目欄位</th><th>提取與比對結果</th></tr>
                 <tr><td>系統會員ID</td><td id="revMemberId">自動產生</td></tr>
-                <tr><td>會員真實姓名</td><td><input type="text" id="revName"></td></tr>
-                <tr><td>會員常用稱呼</td><td><input type="text" id="revNickname"></td></tr>
-                <tr><td>會員通訊電話</td><td><input type="text" id="revPhone"></td></tr>
-                <tr><td>提領銀行代碼</td><td><input type="text" id="revBankCode"></td></tr>
-                <tr><td>提領帳戶戶名</td><td><input type="text" id="revBankUser"></td></tr>
-                <tr><td>提領匯款帳號</td><td><input type="text" id="revBankAccount"></td></tr>
+                <tr><td>意向</td><td><input type="text" id="revRole"></td></tr>
+                <tr><td>真實姓名</td><td><input type="text" id="revName"></td></tr>
+                <tr><td>常用稱呼</td><td><input type="text" id="revNickname"></td></tr>
+                <tr><td>通訊電話</td><td><input type="text" id="revPhone"></td></tr>
+                <tr><td>銀行代碼</td><td><input type="text" id="revBankCode"></td></tr>
+                <tr><td>銀行戶名</td><td><input type="text" id="revBankUser"></td></tr>
+                <tr><td>匯款帳號</td><td><input type="text" id="revBankAccount"></td></tr>
             </table>
-            <p style="font-size: 11px; color: #666;">* 所有上傳檔案已安全封裝至雲端庫。確認無誤即可開通登入。</p>
-            <button onclick="submitFinalRegistration()">● 本人確認以上資料真實無誤，登入系統</button>
+            <p style="font-size: 11px; color: #666;">* 所有上傳檔案及驗證影片已安全封裝至雲端。確認無誤即可開通登入。</p>
+            <button onclick="submitFinalRegistration()" id="btnFinalReg">● 本人確認以上資料真實無誤，登入系統</button>
         </div>
     </section>
 
@@ -215,7 +226,13 @@
     /** ⚠️ 硬編碼與全域資料快取區 **/
     let appData = { lobby: [], matches: [], user: { email: "" } };
     let currentActiveRowId = null;
-    let tempRegisterCache = { idFrontUrl: "", idBackUrl: "", bankUrl: "" }; 
+    let tempRegisterCache = { idFrontUrl: "", idBackUrl: "", bankUrl: "", videoB64: "", intent: "買賣雙棲" }; 
+
+    // --- 相機錄影與語音辨識全域變數 ---
+    let mediaRecorder;
+    let recordedChunks = [];
+    let streamRef = null;
+    let recognition = null;
 
     // --- Base64 檔案轉換引擎 ---
     function fileToBase64(file) {
@@ -320,9 +337,69 @@
         } else { showToast("❌ 資料與庫存原件不匹配"); }
     }
 
+    // --- AI 實境視訊與語音捕捉系統 ---
+    async function startInterviewRecording() {
+        try {
+            // 請求相機權限 (低解析度降低流量)
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 }, audio: true });
+            streamRef = stream;
+            
+            const videoEl = document.getElementById('liveVideo');
+            videoEl.style.display = 'block';
+            videoEl.srcObject = stream;
+            document.getElementById('camPlaceholder').style.display = 'none';
+
+            document.getElementById('btnStartRec').style.display = 'none';
+            document.getElementById('btnStopRec').style.display = 'block';
+
+            recordedChunks = [];
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8,opus' });
+            mediaRecorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data); };
+            mediaRecorder.onstop = async () => {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                tempRegisterCache.videoB64 = await fileToBase64(blob);
+                if(streamRef) streamRef.getTracks().forEach(t => t.stop());
+                videoEl.style.display = 'none';
+                document.getElementById('camPlaceholder').style.display = 'flex';
+                document.getElementById('camPlaceholder').innerText = "[錄影完畢，資料已封裝]";
+            };
+            mediaRecorder.start();
+            showToast("錄影中，請開始口述...");
+
+            // 啟動語音辨識轉文字 (Speech-to-Text)
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'zh-TW';
+                recognition.onresult = (e) => {
+                    let finalTranscript = '';
+                    for (let i = e.resultIndex; i < e.results.length; ++i) {
+                        if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
+                    }
+                    if(finalTranscript) document.getElementById('registerSpokenText').value += finalTranscript + " ";
+                };
+                recognition.start();
+            } else {
+                showToast("瀏覽器不支援自動聽寫，請自行輸入文字");
+            }
+
+        } catch (e) {
+            console.error(e);
+            showToast("無法存取相機或麥克風，請檢查權限");
+        }
+    }
+
+    function stopInterviewRecording() {
+        if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+        if(recognition) recognition.stop();
+        document.getElementById('btnStopRec').style.display = 'none';
+        showToast("錄製完成，請確認文字是否需手動修正");
+    }
+
     function completeRegisterInterview() {
         const spoken = document.getElementById('registerSpokenText').value.trim();
-        if(!spoken) return showToast("請口述語音內容");
+        if(!spoken && !tempRegisterCache.videoB64) return showToast("請完成錄影或手動填寫口白資料");
         tempRegisterCache.spokenText = spoken;
         switchAuthStep('authStepRegisterId');
     }
@@ -343,6 +420,8 @@
             tempRegisterCache.name = res.name;
             tempRegisterCache.phone = res.phone;
             tempRegisterCache.nickname = res.nickname;
+            tempRegisterCache.intent = res.intent || "買賣雙棲";
+            
             document.getElementById('btnProcessId').innerText = "➔ 上傳建檔並授權 AI 讀取匹配";
             switchAuthStep('authStepRegisterBank');
         }
@@ -359,20 +438,26 @@
         if(res) {
             tempRegisterCache.bankUrl = res.bankUrl;
             document.getElementById('revMemberId').innerText = "MEM_" + Math.random().toString(36).substr(2, 7).toUpperCase();
+            
+            // 寫入最終確認表
+            document.getElementById('revRole').value = tempRegisterCache.intent;
             document.getElementById('revName').value = tempRegisterCache.name || "未提取";
             document.getElementById('revNickname').value = tempRegisterCache.nickname || "未提取";
             document.getElementById('revPhone').value = tempRegisterCache.phone || "未提取";
             document.getElementById('revBankCode').value = res.bankCode;
             document.getElementById('revBankUser').value = tempRegisterCache.name || "未提取";
             document.getElementById('revBankAccount').value = res.accountNum;
+            
             document.getElementById('btnProcessBank').innerText = "➔ 上傳存查並提取銀行資料";
             switchAuthStep('authStepRegisterReview');
         }
     }
 
     async function submitFinalRegistration() {
+        document.getElementById('btnFinalReg').innerText = "建立數位建檔與影像上傳中...";
         const finalData = {
             email: appData.user.email,
+            role: document.getElementById('revRole').value.trim(),
             name: document.getElementById('revName').value.trim(),
             nickname: document.getElementById('revNickname').value.trim(),
             phone: document.getElementById('revPhone').value.trim(),
@@ -381,7 +466,8 @@
             bankAccount: document.getElementById('revBankAccount').value.trim(),
             idFrontUrl: tempRegisterCache.idFrontUrl,
             idBackUrl: tempRegisterCache.idBackUrl,
-            bankUrl: tempRegisterCache.bankUrl
+            bankUrl: tempRegisterCache.bankUrl,
+            videoB64: tempRegisterCache.videoB64 // 傳送錄影資料
         };
 
         const res = await callBackend('executeMemberRegistration', { finalData: finalData });
