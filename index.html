@@ -29,7 +29,7 @@
             width: 100%; border: 1px solid var(--border-color); padding: 12px; margin: 10px 0; 
             border-radius: 0; outline: none; font-size: 14px;
         }
-        input:disabled, textarea:disabled { background: #f5f5f5; color: #777; border-color: #ddd; }
+        input:disabled, textarea:disabled { background: #e0e0e0; color: #555; border-color: #ccc; cursor: not-allowed; }
         button { 
             background: var(--bg-white); border: 1px solid var(--border-color); padding: 12px 24px; 
             cursor: pointer; transition: 0.2s; width: 100%; font-weight: bold; margin-bottom: 5px;
@@ -117,7 +117,7 @@
 
         <div id="authStepManualForm" class="auth-step">
             <p style="font-size: 13px; color: blue; font-weight: bold;">[階段 1/2：基本資料建檔]</p>
-            <p style="font-size: 11px; color: #666;">請確實填寫，後續的 AI 錄影將以此資料進行嚴格交叉對碰。</p>
+            <p style="font-size: 11px; color: #666;">請確實填寫，後續的 AI 錄影將以此資料進行嚴格交叉對碰。(註：一個身分證號僅限註冊一組帳號)</p>
             <input type="text" id="manName" placeholder="真實姓名 (例：陳小明)">
             <input type="text" id="manPhone" placeholder="10位數通訊電話 (例：0912345678)" maxlength="10">
             <input type="text" id="manDob" placeholder="8位數西元生日 (例：19900101)" maxlength="8">
@@ -173,7 +173,7 @@
 
     <section id="profileZone" class="section">
         <h3>TROY 系統安全唯讀盾牌（會員專區）</h3>
-        <p style="font-size:11px; color:#666;">基於實名認證防護，日常狀態下全面鎖定。如需更新資料請點擊解鎖。</p>
+        <p style="font-size:11px; color:#666;">基於實名認證防護，日常狀態下全面鎖定。<br>⚠️ <span style="color:var(--accent-red); font-weight:bold;">Email、對話代碼及身分證號碼為永久封印，不可修改。</span></p>
         <div id="profileFieldsArea"></div>
         <button onclick="toggleProfileEdit()" id="btnToggleProfileEdit" style="background:#000; color:#fff;">🔓 解鎖個人檔案群</button>
         <button onclick="saveProfileChanges()" id="btnSaveProfile" style="display:none; background:var(--accent-green); color:#fff;">💾 儲存修改至資料庫</button>
@@ -284,7 +284,6 @@
                 showToast("偵測到暫存紀錄，自動接續進度！");
                 Object.assign(tempRegisterCache, res.savedData);
                 
-                // 動態渲染提詞機
                 if(tempRegisterCache.name) document.getElementById('promptName').innerText = tempRegisterCache.name;
                 if(tempRegisterCache.dob) document.getElementById('promptDob').innerText = tempRegisterCache.dob;
                 if(tempRegisterCache.phone) document.getElementById('promptPhone').innerText = tempRegisterCache.phone;
@@ -340,7 +339,7 @@
             document.getElementById('promptDob').innerText = data.dob;
             document.getElementById('promptPhone').innerText = data.phone;
             document.getElementById('promptIdNum').innerText = data.idNum;
-            showToast("基礎資料暫存成功！進入防偽視訊。");
+            showToast("基礎資料儲存成功！");
             switchAuthStep('authStepVideo');
         }
     }
@@ -465,25 +464,26 @@
         const area = document.getElementById('profileFieldsArea');
         area.innerHTML = '';
         
-        // 核心對齊 17 欄，顯示重點資訊
+        // 核心對齊，並針對 Email, ID, 身分證號碼加上 permanent-lock 徹底封印
         let displayPhone = String(profile["會員電話"] || "");
         if(displayPhone.length === 9 && displayPhone.startsWith("9")) displayPhone = "0" + displayPhone;
 
         const fields = [
-            { label: "會員系統內部ID", val: profile["會員ID"], editable: false },
-            { label: "實名認證 Email", val: profile["會員Email"], editable: false },
-            { label: "認證真實姓名", val: profile["會員姓名"], id: "profName", editable: true },
-            { label: "聯絡通訊電話", val: displayPhone, id: "profPhone", editable: true },
-            { label: "出生年月日", val: profile["出生年月日"], id: "profDob", editable: true },
-            { label: "身分證號碼", val: profile["身分證號碼"], id: "profIdNum", editable: true }
+            { label: "會員系統內部ID", val: profile["會員ID"], editable: false, isPermanent: true },
+            { label: "實名認證 Email", val: profile["會員Email"], editable: false, isPermanent: true },
+            { label: "對話代碼 (Email前綴)", val: profile["對話代碼（Email@前的字串）"] || profile["對話代碼"], editable: false, isPermanent: true },
+            { label: "身分證號碼", val: profile["身分證號碼"], editable: false, isPermanent: true },
+            { label: "認證真實姓名", val: profile["會員姓名"], id: "profName", editable: true, isPermanent: false },
+            { label: "聯絡通訊電話", val: displayPhone, id: "profPhone", editable: true, isPermanent: false },
+            { label: "出生年月日", val: profile["出生年月日"], id: "profDob", editable: true, isPermanent: false }
         ];
 
         fields.forEach(f => {
-            const disableAttr = f.editable ? "disabled" : "disabled class='permanent-lock'";
+            const disableClass = f.isPermanent ? "permanent-lock" : "editable-field";
             area.innerHTML += `
                 <div style="margin-bottom:8px;">
                     <label style="font-size:11px; font-weight:bold; color:#555;">● ${f.label}</label>
-                    <input type="text" id="${f.id || ''}" value="${f.val || ''}" ${disableAttr} class="profile-inputs">
+                    <input type="text" id="${f.id || ''}" value="${f.val || ''}" disabled class="profile-inputs ${disableClass}">
                 </div>
             `;
         });
@@ -492,7 +492,7 @@
     function toggleProfileEdit() {
         const btn = document.getElementById('btnToggleProfileEdit');
         const btnSave = document.getElementById('btnSaveProfile');
-        const inputs = document.querySelectorAll('.profile-inputs:not(.permanent-lock)');
+        const inputs = document.querySelectorAll('.profile-inputs.editable-field');
 
         isProfileEditing = !isProfileEditing;
         if(isProfileEditing) {
@@ -512,8 +512,7 @@
             email: appData.user.email,
             name: document.getElementById('profName').value,
             phone: document.getElementById('profPhone').value,
-            dob: document.getElementById('profDob').value,
-            idNum: document.getElementById('profIdNum').value
+            dob: document.getElementById('profDob').value
         };
 
         const res = await callBackend('updateMemberProfile', { updatedData: updatedData });
