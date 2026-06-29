@@ -141,6 +141,8 @@
         <div data-target="buyerDemand" class="active">我是買方</div>
         <div data-target="launchpad">我是賣方</div>
         <div data-target="lobby">成交大廳</div>
+        <div data-target="aiNegotiation">AI代理對談</div>
+        <div data-target="deliverySign">取件簽核區</div>
         <div data-target="profileZone">會員專區</div>
     </nav>
 
@@ -328,6 +330,20 @@
         <div id="lobbySoldGrid" style="display:none;" class="grid-2"></div>
     </section>
 
+    <section id="aiNegotiation" class="section">
+        <h3>AI 代理人對談進度</h3>
+        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 15px;">此處為您授權 AI 軍師後，系統於背景為您與對象交涉的完整軌跡。</p>
+        <div id="aiLogsList">載入中...</div>
+    </section>
+
+    <section id="deliverySign" class="section">
+        <h3>取件簽核區 (面交核銷)</h3>
+        <div style="border-left: 3px solid var(--accent-yellow); padding-left: 10px; margin-bottom: 15px; font-size: 12px; color: var(--text-muted);">
+            以下顯示已進入談判且尚未售出結案的物件。請於買方面交點交無誤後，點擊按鈕開啟畫布讓買方簽核。
+        </div>
+        <div id="deliveryList">載入中...</div>
+    </section>
+
     <section id="profileZone" class="section">
         <h3>系統安全唯讀盾牌</h3>
         <div style="border-left: 3px solid var(--accent-red); padding-left: 10px; margin-bottom: 15px; font-size: 12px; color: var(--text-muted);">
@@ -338,11 +354,18 @@
         <button onclick="saveProfileChanges()" id="btnSaveProfile" style="display:none;" class="primary-btn">儲存修改</button>
         
         <div class="seller-input-group" style="margin-top:30px; border-top: 1px solid var(--border-color); padding-top:20px;">
-            <label>賣家登錄擴充區 (收款與法規二審必備)</label>
-            <div style="font-size:11px; color:var(--accent-red); margin-bottom:10px; font-weight:bold;">為符合平台信託與金流防禦機制，若未上傳以下證件，點交後款項將進入 HOLD_PAYMENT 暫緩撥款狀態。</div>
-            <input type="file" id="profIdFront" accept="image/*" title="[○ 上傳身分證正面]" style="margin-bottom:5px;">
-            <input type="file" id="profIdBack" accept="image/*" title="[○ 上傳身分證反面]" style="margin-bottom:5px;">
-            <input type="file" id="profBank" accept="image/*" title="[○ 上傳銀行帳號封面]" style="margin-bottom:10px;">
+            <label style="font-size:14px; margin-bottom:5px;">賣家登錄擴充區 (收款與法規二審必備)</label>
+            <div style="font-size:11px; color:var(--accent-red); margin-bottom:15px; font-weight:bold;">為符合平台信託與金流防禦機制，若未上傳以下證件，點交後款項將進入 HOLD_PAYMENT 暫緩撥款狀態。</div>
+            
+            <div style="font-size:12px; font-weight:bold; margin-bottom:4px; color:var(--primary-black);">[○ 上傳身分證正面]</div>
+            <input type="file" id="profIdFront" accept="image/*" style="margin-bottom:15px; border:1px dashed #aaa;">
+            
+            <div style="font-size:12px; font-weight:bold; margin-bottom:4px; color:var(--primary-black);">[○ 上傳身分證反面]</div>
+            <input type="file" id="profIdBack" accept="image/*" style="margin-bottom:15px; border:1px dashed #aaa;">
+            
+            <div style="font-size:12px; font-weight:bold; margin-bottom:4px; color:var(--primary-black);">[○ 上傳銀行帳號封面]</div>
+            <input type="file" id="profBank" accept="image/*" style="margin-bottom:20px; border:1px dashed #aaa;">
+            
             <button onclick="uploadTier2Docs()" id="btnUploadDocs" style="background:#f0f0f0;">上傳證件補登 (觸發解鎖)</button>
         </div>
     </section>
@@ -441,7 +464,6 @@
             } catch(e) {}
         }
         
-        // 畫布初始化
         initCanvas();
     };
 
@@ -518,11 +540,12 @@
         document.querySelectorAll('#mainNav div').forEach(n => n.classList.remove('active')); document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.querySelector(`[data-target="${target}"]`).classList.add('active'); document.getElementById(target).classList.add('active');
         if(target === 'buyerDemand') loadMyDemands();
-        if(target === 'launchpad') toggleSellerView('add'); // 預設進上架區
+        if(target === 'launchpad') toggleSellerView('add');
         if(target === 'lobby') fetchLobbyData();
+        if(target === 'aiNegotiation' || target === 'deliverySign') loadAiLogsAndDeliveries();
     }
 
-    // --- 買方需求 (保持不變) ---
+    // --- 買方需求 ---
     function toggleDemandView(view) {
         document.getElementById('tabAddDemand').classList.remove('active'); document.getElementById('tabMatchResults').classList.remove('active');
         document.getElementById('viewAddDemand').style.display = 'none'; document.getElementById('viewMatchResults').style.display = 'none';
@@ -637,7 +660,6 @@
             let tagClass = "tag-green"; let statusText = "充裕";
             if(m.daysLeft <= 3) { tagClass = "tag-red"; statusText = "極緊急"; } else if (m.daysLeft <= 7) { tagClass = "tag-yellow"; statusText = "即將到期"; }
 
-            // 物理容納邊緣衝突預警
             let warningHTML = "";
             let L = parseInt(m.sellerItem["物件最長（寬）（公分）"]) || 0;
             let W = parseInt(m.sellerItem["物件最寬（深）（公分）"]) || 0;
@@ -785,7 +807,6 @@
                             </div>
                             <div style="display:flex; gap:10px;">
                                 <button id="btnAiNego_${uniqueId}" onclick='launchNegotiation("seller", "${uniqueId}", ${JSON.stringify({sellerItem: sItem, demand: m.demand}).replace(/'/g, "&apos;")})' class="primary-btn" style="flex:1;">➔ 授權 AI 向此買家談判</button>
-                                <button onclick='openSignModal("${sItem["物件ID"]}", "${m.demand["會員ID"]}", "${m.demand["買家稱呼"]}")' style="flex:1; border-color:var(--primary-black);">● 進入點交核銷</button>
                             </div>
                         </div>
                     `;
@@ -814,9 +835,71 @@
         if(res) {
             showToast("談判已啟動，請留意您的 8 小時死線信箱！");
         } else {
-            // 防護：若有撞車衝突，還原狀態
             btn.disabled = false; btn.innerText = "➔ 授權 AI 啟動談判"; card.classList.remove("locked-negotiation");
         }
+    }
+
+    // --- 【Chapter 4 & 5】抓取並渲染 AI 代理日誌與待點交物件 ---
+    async function loadAiLogsAndDeliveries() {
+        document.getElementById('aiLogsList').innerHTML = "資料同步中...";
+        document.getElementById('deliveryList').innerHTML = "資料同步中...";
+        
+        const res = await callBackend('getAiLogsAndDeliveries', { email: appData.user.email });
+        if(res) {
+            renderAiLogs(res.logs, res.userId);
+            renderDeliveries(res.logs, res.userId);
+        }
+    }
+
+    function renderAiLogs(logs, userId) {
+        const list = document.getElementById('aiLogsList');
+        if(logs.length === 0) return list.innerHTML = "<div style='color:var(--text-muted);'>目前無 AI 代理人出兵或對談紀錄。</div>";
+        
+        list.innerHTML = "";
+        logs.forEach(obj => {
+            const l = obj.log;
+            const item = obj.item || {"物件品項": "未知物件"};
+            const role = (l["賣家ID"] === userId) ? "賣方" : "買方";
+            const targetName = (role === "賣方") ? l["買家稱呼"] : l["賣家稱呼"];
+            
+            // 防跳行讀取對話紀錄
+            let chatHtml = "";
+            const chatKeys = Object.keys(l).filter(k => k.includes("對話紀錄") && !k.includes("對話紀錄ID")).sort();
+            chatKeys.forEach(k => {
+                if(l[k]) chatHtml += `<div style="background:#f9f9f9; padding:8px; margin-bottom:5px; border-radius:2px; font-size:11px; border-left:2px solid #ccc;">${l[k]}</div>`;
+            });
+            if (!chatHtml) chatHtml = `<div style="font-size:11px; color:#999;">等待代理人回報...</div>`;
+
+            list.innerHTML += `
+                <div class="card">
+                    <div style="font-weight:bold; font-size:14px; margin-bottom:5px;">${item["物件品項"]} <span class="tag tag-neutral">${role}視角</span></div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">交涉對象：${targetName}</div>
+                    <div style="font-size:12px; font-weight:bold; margin-bottom:5px;">AI 談判軍師戰報：</div>
+                    ${chatHtml}
+                </div>
+            `;
+        });
+    }
+
+    function renderDeliveries(logs, userId) {
+        const list = document.getElementById('deliveryList');
+        // 過濾出：我是賣家 + 該物件尚未售出結案的 AI 代理紀錄
+        const pending = logs.filter(obj => obj.log["賣家ID"] === userId && obj.item && (obj.item["是否已確認售出"] !== true && obj.item["是否已確認售出"] !== "是"));
+        
+        if(pending.length === 0) return list.innerHTML = "<div style='color:var(--text-muted);'>目前無待面交核銷的物件。</div>";
+        list.innerHTML = "";
+        
+        pending.forEach(obj => {
+            const l = obj.log;
+            const item = obj.item;
+            list.innerHTML += `
+                <div class="card">
+                    <div style="font-weight:bold; font-size:14px; margin-bottom:5px;">${item["物件品項"]} ($${item["售價/件"]})</div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">買方：${l["買家稱呼"]} (ID: ${l["買家ID"]})</div>
+                    <button onclick='openSignModal("${item["物件ID"]}", "${l["買家ID"]}", "${l["買家稱呼"]}")' class="primary-btn">● 開啟 Canvas 點交核銷</button>
+                </div>
+            `;
+        });
     }
 
     // --- 【Chapter 5】現場電子簽名核銷 (The Final Dotpoint) ---
@@ -859,7 +942,6 @@
     function closeSignModal() { document.getElementById('signModal').style.display = 'none'; }
 
     async function submitSignature() {
-        // 取得畫布 Base64
         const dataUrl = signCanvas.toDataURL("image/png");
         document.getElementById('btnSubmitSign').disabled = true;
         document.getElementById('btnSubmitSign').innerText = "核銷加密傳輸中...";
@@ -873,8 +955,7 @@
         if(res) {
             showToast("核銷完成！黑貓Pay待撥款通知已發送");
             closeSignModal();
-            // 重整賣家視角畫面
-            loadSellerMatches();
+            loadAiLogsAndDeliveries(); // 重新整理待面交清單
         }
     }
 
@@ -882,7 +963,7 @@
     function toggleLobbyFilter(el) {
         document.querySelectorAll('.lobby-toggle').forEach(t => {
             t.classList.remove('active');
-            t.innerText = t.innerText.replace('● ', '○ '); // 還原為未選
+            t.innerText = t.innerText.replace('● ', '○ '); 
         });
         el.classList.add('active');
         if(el.dataset.cat !== '全部') el.innerText = el.innerText.replace('○ ', '● ');
@@ -919,7 +1000,6 @@
             if(daysLeft <= 5) borderColor = "var(--accent-red)";
             else if (daysLeft <= 10) borderColor = "var(--accent-yellow)";
 
-            // 擷取前6字洗鍊區域
             const areaStr = String(item["取件地址（縣市/鄉鎮區/路段/街道/巷弄/號碼/樓層）"]).substring(0, 6) + "...";
 
             grid.innerHTML += `
@@ -978,7 +1058,6 @@
     }
 
     async function uploadTier2Docs() {
-        // 模擬上傳與標記
         const files = [document.getElementById('profIdFront'), document.getElementById('profIdBack'), document.getElementById('profBank')];
         if(!files[0].files.length || !files[1].files.length || !files[2].files.length) {
             return showToast("請完整提供正反面與帳戶封面", true);
