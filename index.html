@@ -66,7 +66,8 @@
         button.danger-btn:hover { background: var(--accent-red); color: var(--bg-white); }
         button:disabled { background: #eee; cursor: not-allowed; border-color: #ddd; color: #999; }
         
-        .card { border: 1px solid var(--border-color); padding: 15px; margin-bottom: 12px; background: var(--bg-white); border-radius: 2px; }
+        .card { border: 1px solid var(--border-color); padding: 15px; margin-bottom: 12px; background: var(--bg-white); border-radius: 2px; transition: 0.3s; }
+        .card.locked-negotiation { border: 2px double var(--primary-black); background: #fafafa; }
         
         /* Status Tags & Indicators */
         .tag { display: inline-block; padding: 3px 8px; font-size: 11px; font-weight: bold; border-radius: 2px; margin-right: 5px; }
@@ -102,6 +103,19 @@
         /* Toast Feedback */
         .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--primary-black); color: var(--bg-white); padding: 12px 24px; font-size: 13px; font-weight: 600; border-radius: 2px; display: none; z-index: 9999; text-align: center; }
         .toast.error { background: var(--accent-red); }
+
+        /* Seller Form specific styling */
+        .seller-input-group { border-bottom: 1px solid var(--primary-black); padding-bottom: 15px; margin-bottom: 15px; background: var(--bg-white); }
+        .seller-input-group:last-child { border-bottom: none; }
+        .warning-box { background: #fff4e5; border-left: 3px solid #f5b041; padding: 10px; font-size: 12px; margin-bottom: 15px; color: #b97700; font-weight: bold; }
+
+        /* Lobby specific styling */
+        .lobby-filters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 15px; }
+        .lobby-toggle { border: 1px solid var(--primary-black); background: var(--bg-white); color: var(--primary-black); font-size: 12px; padding: 6px; cursor: pointer; text-align: center; transition: 0.2s; }
+        .lobby-toggle.active { background: var(--primary-black); color: var(--bg-white); }
+        .lobby-card { border: 1px solid var(--border-color); background: var(--bg-white); padding: 12px; font-size: 12px; display: flex; flex-direction: column; gap: 6px; }
+        .lobby-sold-banner { text-align: center; font-size: 12px; padding: 10px; border-top: 1px solid var(--primary-black); border-bottom: 1px solid var(--border-color); margin: 20px 0; cursor: pointer; background: #fafafa; color: var(--text-muted); transition: 0.2s; }
+        .lobby-sold-banner:hover { background: #f0f0f0; color: var(--primary-black); }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -218,13 +232,85 @@
     </section>
 
     <section id="launchpad" class="section">
-        <h3>我是賣方</h3>
-        <p style="font-size:12px; color:var(--text-muted);">AI 智能上架與供貨清單建構中，將於下一階段完美釋出。</p>
+        <h3>賣方智慧上架艙</h3>
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom: 20px;">提供 10 秒影片，AI 將自動為您產出極致洗鍊的文案，並精算最佳定價策略。</p>
+        
+        <div class="seller-input-group">
+            <label style="margin-bottom:10px; cursor:pointer;">[+ 喚醒相機進行 10 秒現場錄影上傳]</label>
+            <input type="file" id="sellerMedia" accept="image/*,video/*" capture="environment" style="border: 1px dashed var(--primary-black); padding: 20px; text-align:center;">
+            <button onclick="parseSellerMedia()" id="btnParseSellerMedia" class="primary-btn" style="margin-top:5px;">AI 視覺解構與暗箱注入</button>
+        </div>
+
+        <input type="hidden" id="sellerAiCategory">
+        <input type="hidden" id="sellerAiItem">
+        <input type="hidden" id="sellerAiName">
+        <input type="hidden" id="sellerAiColor">
+        <input type="hidden" id="sellerAiMaterial">
+        <input type="hidden" id="sellerAiConditionStr">
+        <input type="hidden" id="sellerAiStory">
+        <input type="hidden" id="sellerAiCO2">
+        <input type="hidden" id="sellerAiIkeaDiff">
+        
+        <div class="seller-input-group">
+            <label>AI 輔助公分尺寸 (可手動覆寫)</label>
+            <div class="grid-3">
+                <input type="number" id="sellerL" placeholder="長 (深)">
+                <input type="number" id="sellerW" placeholder="寬">
+                <input type="number" id="sellerH" placeholder="高">
+            </div>
+        </div>
+
+        <div class="seller-input-group">
+            <div class="grid-2">
+                <div><label>售價 / 件 (限制 $10~$2000)</label><input type="number" id="sellerPrice" placeholder="$0"></div>
+                <div><label>底牌 (可接受折價折扣)</label><input type="number" id="sellerDiscount" placeholder="僅供 AI 談判用"></div>
+            </div>
+            <div><label>可接受狀態宣告</label><select id="sellerCondition"><option value="近全新">近全新</option><option value="良好">良好</option><option value="普通">普通</option></select></div>
+            <div id="lossAversionMsg" class="warning-box" style="display:none;"></div>
+        </div>
+
+        <div class="seller-input-group">
+            <label>取件完整地址</label>
+            <input type="text" id="sellerAddress" placeholder="縣市/鄉鎮區/路段/街道/巷弄/號碼/樓層">
+            <div class="grid-2">
+                <div><label>必須售出死線</label><input type="date" id="sellerDeadline"></div>
+                <div><label>取貨方式</label><input type="text" value="僅限自取" disabled></div>
+            </div>
+        </div>
+
+        <div class="seller-input-group">
+            <label>加值勞務確認</label>
+            <div class="grid-2">
+                <select id="sellerDismantle"><option value="否">不需拆裝</option><option value="是">需要拆裝</option></select>
+                <select id="sellerStairs"><option value="否">無樓梯/有電梯</option><option value="是">需搬樓梯</option></select>
+                <select id="sellerHelpDismantle"><option value="買家自己拆">買家自己拆</option><option value="可協助先拆">可協助先拆</option></select>
+                <select id="sellerHelpMove"><option value="買家搬下樓">買家搬下樓</option><option value="可協助搬到一樓">可協助搬到一樓</option></select>
+            </div>
+        </div>
+
+        <button onclick="submitSellerItem()" id="btnSubmitSeller" class="primary-btn">➔ 確認送出上架 (啟動利潤精算)</button>
     </section>
 
     <section id="lobby" class="section">
         <h3>全台成交大廳</h3>
-        <div id="lobbyList"></div>
+        <div id="lobbyMacroStats" style="font-size:11px; font-weight:bold; background:var(--primary-black); color:var(--bg-white); padding:8px; text-align:center; margin-bottom:15px; border-radius:2px;">
+            ● 平台戰報載入中...
+        </div>
+        
+        <div class="lobby-filters">
+            <div class="lobby-toggle active" data-cat="全部" onclick="toggleLobbyFilter(this)">全部</div>
+            <div class="lobby-toggle" data-cat="沙發類" onclick="toggleLobbyFilter(this)">○ 沙發類</div>
+            <div class="lobby-toggle" data-cat="桌椅類" onclick="toggleLobbyFilter(this)">○ 桌椅類</div>
+            <div class="lobby-toggle" data-cat="家電類" onclick="toggleLobbyFilter(this)">○ 家電類</div>
+        </div>
+
+        <div id="lobbyGrid" class="grid-2"></div>
+
+        <div class="lobby-sold-banner" onclick="toggleSoldLobby()">
+            ─ 點擊解鎖平台成交誠信履歷 (<span id="soldCount">0</span> 筆已點交結案) ─
+        </div>
+        
+        <div id="lobbySoldGrid" style="display:none;" class="grid-2"></div>
     </section>
 
     <section id="profileZone" class="section">
@@ -241,7 +327,8 @@
 <div id="toast" class="toast"></div>
 
 <script>
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwaq-13DlQxTCBTnTdJ1ILFvUvnr-_P7tKbeSXUixN3oaRMcoWnIH4qJuxjrRUtpUtK/exec";
+    // 嚴格依循規範：固定宣告於頂部
+    const GAS_WEB_APP_URL = "使用者提供的網址";
 
     // 台灣縣市輕量資料庫
     const TW_DATA = {
@@ -253,29 +340,24 @@
         "高雄市": ["楠梓區","左營區","鼓山區","三民區","鹽埕區","前金區","新興區","苓雅區","前鎮區","旗津區","小港區","鳳山區","林園區","大寮區","大樹區","大社區","仁武區","鳥松區","岡山區","橋頭區","燕巢區","田寮區","阿蓮區","路竹區","湖內區","茄萣區","永安區","彌陀區","梓官區","旗山區","美濃區","六龜區","甲仙區","杉林區","內門區","茂林區","桃源區","那瑪夏區"]
     };
 
-    let appData = { lobby: [], myDemands: [], matches: [], user: { email: "", fullProfile: null }, currentMatchFilter: 'broad' };
+    let appData = { 
+        lobby: [], lobbySold: [], myDemands: [], matches: [], 
+        user: { email: "", fullProfile: null }, currentMatchFilter: 'broad', activeLobbyCat: '全部' 
+    };
     let isProfileEditing = false;
     let savedAddresses = [];
 
     // --- LocalStorage 自動儲存與恢復機制 ---
     function saveDraft() {
         const draft = {
-            id: document.getElementById('reqId').value,
-            type: document.getElementById('reqType').value,
-            item: document.getElementById('reqItem').value,
-            color: document.getElementById('reqColor').value,
-            condition: document.getElementById('reqCondition').value,
-            qty: document.getElementById('reqQty').value,
-            deadline: document.getElementById('reqDeadline').value,
-            city: document.getElementById('reqCity').value,
-            dist: document.getElementById('reqCityDist').value,
-            road: document.getElementById('reqRoad').value,
-            street: document.getElementById('reqStreet').value,
-            alley: document.getElementById('reqAlley').value,
-            number: document.getElementById('reqNumber').value,
-            floor: document.getElementById('reqFloor').value,
-            room: document.getElementById('reqRoom').value,
-            notes: document.getElementById('reqNotes').value,
+            id: document.getElementById('reqId').value, type: document.getElementById('reqType').value,
+            item: document.getElementById('reqItem').value, color: document.getElementById('reqColor').value,
+            condition: document.getElementById('reqCondition').value, qty: document.getElementById('reqQty').value,
+            deadline: document.getElementById('reqDeadline').value, city: document.getElementById('reqCity').value,
+            dist: document.getElementById('reqCityDist').value, road: document.getElementById('reqRoad').value,
+            street: document.getElementById('reqStreet').value, alley: document.getElementById('reqAlley').value,
+            number: document.getElementById('reqNumber').value, floor: document.getElementById('reqFloor').value,
+            room: document.getElementById('reqRoom').value, notes: document.getElementById('reqNotes').value,
             aiText: document.getElementById('aiDemandText').value
         };
         localStorage.setItem('troy_draft_demand', JSON.stringify(draft));
@@ -286,67 +368,48 @@
         if(draftStr) {
             try {
                 const draft = JSON.parse(draftStr);
-                document.getElementById('reqId').value = draft.id || "";
-                document.getElementById('reqType').value = draft.type || "";
-                document.getElementById('reqItem').value = draft.item || "";
-                document.getElementById('reqColor').value = draft.color || "";
-                document.getElementById('reqCondition').value = draft.condition || "不拘";
-                document.getElementById('reqQty').value = draft.qty || "1";
-                document.getElementById('reqDeadline').value = draft.deadline || "";
-                document.getElementById('reqRoad').value = draft.road || "";
-                document.getElementById('reqStreet').value = draft.street || "";
-                document.getElementById('reqAlley').value = draft.alley || "";
-                document.getElementById('reqNumber').value = draft.number || "";
-                document.getElementById('reqFloor').value = draft.floor || "1";
-                document.getElementById('reqRoom').value = draft.room || "";
-                document.getElementById('reqNotes').value = draft.notes || "";
+                document.getElementById('reqId').value = draft.id || ""; document.getElementById('reqType').value = draft.type || "";
+                document.getElementById('reqItem').value = draft.item || ""; document.getElementById('reqColor').value = draft.color || "";
+                document.getElementById('reqCondition').value = draft.condition || "不拘"; document.getElementById('reqQty').value = draft.qty || "1";
+                document.getElementById('reqDeadline').value = draft.deadline || ""; document.getElementById('reqRoad').value = draft.road || "";
+                document.getElementById('reqStreet').value = draft.street || ""; document.getElementById('reqAlley').value = draft.alley || "";
+                document.getElementById('reqNumber').value = draft.number || ""; document.getElementById('reqFloor').value = draft.floor || "1";
+                document.getElementById('reqRoom').value = draft.room || ""; document.getElementById('reqNotes').value = draft.notes || "";
                 document.getElementById('aiDemandText').value = draft.aiText || "";
 
                 if(draft.city && TW_DATA[draft.city]) {
-                    document.getElementById('reqCity').value = draft.city;
-                    updateDistricts();
+                    document.getElementById('reqCity').value = draft.city; updateDistricts();
                     if(draft.dist) document.getElementById('reqCityDist').value = draft.dist;
                 }
             } catch(e){}
         }
     }
 
-    // --- 頁面初始化與綁定 ---
     window.onload = () => {
         initAddressDropdowns();
-
-        // 綁定輸入即時儲存草稿
         document.querySelectorAll('#viewAddDemand input, #viewAddDemand select, #viewAddDemand textarea').forEach(el => {
-            el.addEventListener('input', saveDraft);
-            el.addEventListener('change', saveDraft);
+            el.addEventListener('input', saveDraft); el.addEventListener('change', saveDraft);
         });
 
-        // 檢查登入狀態恢復
         const savedProfile = localStorage.getItem('troy_user_profile');
         if (savedProfile) {
             try {
                 const profile = JSON.parse(savedProfile);
                 if (profile && profile["會員Email"]) {
                     appData.user.email = profile["會員Email"];
-                    unlockPlatform(profile);
-                    loadDraft(); // 登入成功後載入剛才打到一半的草稿
+                    unlockPlatform(profile); loadDraft(); 
                 }
             } catch(e) {}
         }
     };
 
-    // --- 初始化 UI ---
     function initAddressDropdowns() {
         const citySelect = document.getElementById('reqCity');
-        // 避免重複加入
-        if(citySelect.options.length <= 1) {
-            Object.keys(TW_DATA).forEach(city => { citySelect.add(new Option(city, city)); });
-        }
+        if(citySelect.options.length <= 1) { Object.keys(TW_DATA).forEach(city => { citySelect.add(new Option(city, city)); }); }
     }
     function updateDistricts() {
         const city = document.getElementById('reqCity').value;
-        const distSelect = document.getElementById('reqCityDist');
-        distSelect.innerHTML = '<option value="">選擇鄉鎮區</option>';
+        const distSelect = document.getElementById('reqCityDist'); distSelect.innerHTML = '<option value="">選擇鄉鎮區</option>';
         if(city && TW_DATA[city]) { TW_DATA[city].forEach(d => distSelect.add(new Option(d, d))); }
     }
 
@@ -376,7 +439,6 @@
         document.getElementById('btnSendOtp').disabled = false;
         if(res) { showToast("驗證碼已發送"); document.querySelectorAll('.auth-step').forEach(e=>e.classList.remove('active')); document.getElementById('authStep2').classList.add('active'); }
     }
-
     async function verifyEmailOtp() {
         const otp = document.getElementById('gatewayOtp').value.trim();
         if(otp.length !== 6) return showToast("請輸入6位數", true);
@@ -389,7 +451,6 @@
             res.questions.forEach(q => { area.innerHTML += `<label>驗證密題：您的 [${q.field}]</label><input type="text" class="login-ans-input" data-field="${q.field}">`; });
         }
     }
-
     async function submitLoginQuestions() {
         let answers = {}; document.querySelectorAll('.login-ans-input').forEach(input => answers[input.getAttribute('data-field')] = input.value.trim());
         const res = await callBackend('verifyMemberProfileMatch', { email: appData.user.email, answers: answers });
@@ -397,22 +458,17 @@
     }
 
     function unlockPlatform(profile) {
-        appData.user.fullProfile = profile;
-        appData.user.email = profile["會員Email"];
-        localStorage.setItem('troy_user_profile', JSON.stringify(profile)); // 永續儲存登入狀態
-        
+        appData.user.fullProfile = profile; appData.user.email = profile["會員Email"];
+        localStorage.setItem('troy_user_profile', JSON.stringify(profile)); 
         document.getElementById('gateway').style.display = 'none'; document.getElementById('mainNav').style.display = 'flex';
         
         let codeKey = Object.keys(profile).find(k => k.includes("對話代碼"));
-        
         document.getElementById('guName').innerText = profile["會員姓名"] || "";
         document.getElementById('guId').innerText = profile["會員ID"] || "";
         document.getElementById('guCode').innerText = profile[codeKey] || profile["會員Email"].split('@')[0];
         document.getElementById('globalUserBar').style.display = 'flex';
 
-        initAddressDropdowns();
-        renderProfileZone(profile);
-        switchSection('buyerDemand'); 
+        initAddressDropdowns(); renderProfileZone(profile); switchSection('buyerDemand'); 
     }
 
     document.querySelectorAll('#mainNav div').forEach(nav => { nav.addEventListener('click', function() { switchSection(this.getAttribute('data-target')); }); });
@@ -420,185 +476,137 @@
         document.querySelectorAll('#mainNav div').forEach(n => n.classList.remove('active')); document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.querySelector(`[data-target="${target}"]`).classList.add('active'); document.getElementById(target).classList.add('active');
         if(target === 'buyerDemand') loadMyDemands();
-        if(target === 'lobby') loadLobby();
+        if(target === 'lobby') fetchLobbyData();
     }
 
+    // --- 買方需求 (保留不變) ---
     function toggleDemandView(view) {
         document.getElementById('tabAddDemand').classList.remove('active'); document.getElementById('tabMatchResults').classList.remove('active');
         document.getElementById('viewAddDemand').style.display = 'none'; document.getElementById('viewMatchResults').style.display = 'none';
         if(view === 'add') { document.getElementById('tabAddDemand').classList.add('active'); document.getElementById('viewAddDemand').style.display = 'block'; }
         else { document.getElementById('tabMatchResults').classList.add('active'); document.getElementById('viewMatchResults').style.display = 'block'; loadMatches(); }
     }
-
-    // --- 買方需求：智慧表單與嚴格驗證 ---
     async function aiParseDemandForm() {
         const fileInput = document.getElementById('aiDemandImage'); const textDesc = document.getElementById('aiDemandText').value.trim();
         if(!fileInput.files.length && !textDesc) return showToast("請提供圖片或敘述文字", true);
         document.getElementById('btnAiParseDemand').disabled = true; document.getElementById('btnAiParseDemand').innerText = "AI 視覺解析中...";
-        
         let b64 = null;
-        if(fileInput.files.length > 0) {
-            const reader = new FileReader();
-            b64 = await new Promise(r => { reader.onload = () => r(reader.result); reader.readAsDataURL(fileInput.files[0]); });
-        }
-        
+        if(fileInput.files.length > 0) { const reader = new FileReader(); b64 = await new Promise(r => { reader.onload = () => r(reader.result); reader.readAsDataURL(fileInput.files[0]); }); }
         const res = await callBackend('aiParseDemand', { imageB64: b64, text: textDesc });
         document.getElementById('btnAiParseDemand').disabled = false; document.getElementById('btnAiParseDemand').innerText = "讓 AI 自動為我填單";
-
         if(res) {
             ['Type', 'Item', 'Color', 'Condition', 'Qty', 'Deadline', 'Road', 'Street', 'Alley', 'Number', 'Floor', 'Room', 'Notes'].forEach(k => {
                 const el = document.getElementById('req' + k); if(el && res[k.toLowerCase()]) el.value = res[k.toLowerCase()];
             });
             if(res.city && TW_DATA[res.city]) { document.getElementById('reqCity').value = res.city; updateDistricts(); if(res.town) document.getElementById('reqCityDist').value = res.town; }
-            showToast("AI 辨識完成，請確認表單");
-            saveDraft(); // AI 填寫完畢後立即觸發一次草稿儲存
+            showToast("AI 辨識完成，請確認表單"); saveDraft(); 
         }
     }
-
     function clearDemandForm() {
         ['reqId', 'reqType', 'reqItem', 'reqColor', 'reqDeadline', 'reqCity', 'reqCityDist', 'reqRoad', 'reqStreet', 'reqAlley', 'reqNumber', 'reqRoom', 'reqNotes', 'aiDemandText'].forEach(id => {
             document.getElementById(id).value = ""; document.getElementById(id).classList.remove('error-field');
         });
         document.getElementById('reqCondition').value = "不拘"; document.getElementById('reqQty').value = "1"; document.getElementById('reqFloor').value = "1";
-        localStorage.removeItem('troy_draft_demand'); // 清除本地草稿緩存
+        localStorage.removeItem('troy_draft_demand');
     }
-
     function validateAddress() {
-        let valid = true;
-        const city = document.getElementById('reqCity'); const dist = document.getElementById('reqCityDist');
-        const road = document.getElementById('reqRoad'); const street = document.getElementById('reqStreet');
-        const number = document.getElementById('reqNumber'); const floor = document.getElementById('reqFloor');
-        
+        let valid = true; const city = document.getElementById('reqCity'); const dist = document.getElementById('reqCityDist');
+        const road = document.getElementById('reqRoad'); const street = document.getElementById('reqStreet'); const number = document.getElementById('reqNumber'); const floor = document.getElementById('reqFloor');
         [city, dist, road, street, number, floor].forEach(el => el.classList.remove('error-field'));
-
         if(!city.value) { city.classList.add('error-field'); valid = false; }
         if(!dist.value) { dist.classList.add('error-field'); valid = false; }
         if(!road.value && !street.value) { road.classList.add('error-field'); street.classList.add('error-field'); valid = false; showToast("路段或街道至少需填一項", true); }
         if(!number.value) { number.classList.add('error-field'); valid = false; }
         if(!floor.value) document.getElementById('reqFloor').value = "1";
-
         return valid;
     }
-
     async function saveDemandForm() {
         if(!document.getElementById('reqItem').value.trim() || !document.getElementById('reqDeadline').value) return showToast("品項與期限為必填", true);
-        if(!validateAddress()) return showToast("地址填寫不完整或不合理，請修正紅框處", true);
-
+        if(!validateAddress()) return showToast("地址填寫不完整，請修正", true);
         const payload = {
-            id: document.getElementById('reqId').value, email: appData.user.email,
-            type: document.getElementById('reqType').value.trim(), item: document.getElementById('reqItem').value.trim(),
-            color: document.getElementById('reqColor').value.trim(), condition: document.getElementById('reqCondition').value,
-            qty: document.getElementById('reqQty').value, deadline: document.getElementById('reqDeadline').value,
-            city: document.getElementById('reqCity').value, town: document.getElementById('reqCityDist').value,
-            road: document.getElementById('reqRoad').value.trim(), street: document.getElementById('reqStreet').value.trim(),
-            alley: document.getElementById('reqAlley').value.trim(), number: document.getElementById('reqNumber').value.trim(),
-            floor: document.getElementById('reqFloor').value.trim(), room: document.getElementById('reqRoom').value.trim(),
-            notes: document.getElementById('reqNotes').value.trim()
+            id: document.getElementById('reqId').value, email: appData.user.email, type: document.getElementById('reqType').value.trim(), item: document.getElementById('reqItem').value.trim(),
+            color: document.getElementById('reqColor').value.trim(), condition: document.getElementById('reqCondition').value, qty: document.getElementById('reqQty').value, deadline: document.getElementById('reqDeadline').value,
+            city: document.getElementById('reqCity').value, town: document.getElementById('reqCityDist').value, road: document.getElementById('reqRoad').value.trim(), street: document.getElementById('reqStreet').value.trim(),
+            alley: document.getElementById('reqAlley').value.trim(), number: document.getElementById('reqNumber').value.trim(), floor: document.getElementById('reqFloor').value.trim(), room: document.getElementById('reqRoom').value.trim(), notes: document.getElementById('reqNotes').value.trim()
         };
-        
         document.getElementById('btnSaveDemand').disabled = true;
         const res = await callBackend('saveBuyerDemand', { demand: payload });
         document.getElementById('btnSaveDemand').disabled = false;
-        if(res) { 
-            showToast("需求已成功送出！"); 
-            clearDemandForm(); // 這會連帶清除 localStorage
-            loadMyDemands(); 
-        }
+        if(res) { showToast("需求已送出！"); clearDemandForm(); loadMyDemands(); }
     }
-
     async function loadMyDemands() {
         const list = document.getElementById('myDemandsList'); list.innerHTML = "載入中...";
         const res = await callBackend('getBuyerDemands', { email: appData.user.email });
         if(res) {
-            appData.myDemands = res.demands || []; list.innerHTML = "";
-            savedAddresses = []; 
-            
+            appData.myDemands = res.demands || []; list.innerHTML = ""; savedAddresses = []; 
             if(appData.myDemands.length === 0) return list.innerHTML = "<div style='color:var(--text-muted);'>目前無需求紀錄。</div>";
-            
             appData.myDemands.forEach(d => {
                 const addrStr = JSON.stringify({ c:d["所在地縣市"], t:d["所在地鄉鎮區村"], r:d["所在地路段"], s:d["所在地街道"], a:d["所在地巷弄"], n:d["所在地號碼"], f:d["所在地樓層與室號"] });
                 if(!savedAddresses.some(sa => sa.str === addrStr)) savedAddresses.push({ str: addrStr, raw: d });
-
-                list.innerHTML += `
-                    <div class="card" style="font-size:12px;">
-                        <div style="font-weight:bold; font-size:14px; margin-bottom:5px;">${d["需求物件品項"]} <span style="font-weight:normal; color:#666;">(x${d["需求數量"]})</span></div>
-                        <div style="color:var(--text-muted); margin-bottom:8px;">期限：${d["幾年幾月幾日前需拿到"].split('T')[0]} | 地點：${d["所在地縣市"]}${d["所在地鄉鎮區村"]}</div>
-                        <div style="display:flex; gap:5px;">
-                            <button onclick='editDemand(${JSON.stringify(d).replace(/'/g, "&apos;")})' style="padding:6px; margin:0; background:#f0f0f0;">載入編輯</button>
-                            <button onclick='deleteDemand("${d["需求項目ID"]}")' class="danger-btn" style="padding:6px; margin:0;">刪除</button>
-                        </div>
-                    </div>`;
+                list.innerHTML += `<div class="card" style="font-size:12px;"><div style="font-weight:bold; font-size:14px; margin-bottom:5px;">${d["需求物件品項"]} <span style="font-weight:normal; color:#666;">(x${d["需求數量"]})</span></div><div style="color:var(--text-muted); margin-bottom:8px;">期限：${d["幾年幾月幾日前需拿到"].split('T')[0]} | 地點：${d["所在地縣市"]}${d["所在地鄉鎮區村"]}</div><div style="display:flex; gap:5px;"><button onclick='editDemand(${JSON.stringify(d).replace(/'/g, "&apos;")})' style="padding:6px; margin:0; background:#f0f0f0;">載入編輯</button><button onclick='deleteDemand("${d["需求項目ID"]}")' class="danger-btn" style="padding:6px; margin:0;">刪除</button></div></div>`;
             });
-
-            const sel = document.getElementById('historyAddressSelect');
-            sel.innerHTML = '<option value="">載入歷史地址...</option>';
+            const sel = document.getElementById('historyAddressSelect'); sel.innerHTML = '<option value="">載入歷史地址...</option>';
             savedAddresses.forEach((sa, i) => { sel.add(new Option(`${sa.raw["所在地縣市"]}${sa.raw["所在地鄉鎮區村"]}...`, i)); });
         }
     }
-
     function loadHistoryAddress() {
-        const idx = document.getElementById('historyAddressSelect').value;
-        if(idx === "") return;
+        const idx = document.getElementById('historyAddressSelect').value; if(idx === "") return;
         const d = savedAddresses[idx].raw;
-        if(TW_DATA[d["所在地縣市"]]) {
-            document.getElementById('reqCity').value = d["所在地縣市"]; updateDistricts();
-            document.getElementById('reqCityDist').value = d["所在地鄉鎮區村"];
-        }
-        document.getElementById('reqRoad').value = d["所在地路段"]; document.getElementById('reqStreet').value = d["所在地街道"];
-        document.getElementById('reqAlley').value = d["所在地巷弄"]; document.getElementById('reqNumber').value = d["所在地號碼"];
-        
-        const fAndR = (d["所在地樓層與室號"]||"").split('-'); 
-        document.getElementById('reqFloor').value = fAndR[0] || "1"; document.getElementById('reqRoom').value = fAndR[1] || "";
-        showToast("已載入歷史地址");
-        saveDraft(); // 載入後觸發自動存檔
+        if(TW_DATA[d["所在地縣市"]]) { document.getElementById('reqCity').value = d["所在地縣市"]; updateDistricts(); document.getElementById('reqCityDist').value = d["所在地鄉鎮區村"]; }
+        document.getElementById('reqRoad').value = d["所在地路段"]; document.getElementById('reqStreet').value = d["所在地街道"]; document.getElementById('reqAlley').value = d["所在地巷弄"]; document.getElementById('reqNumber').value = d["所在地號碼"];
+        const fAndR = (d["所在地樓層與室號"]||"").split('-'); document.getElementById('reqFloor').value = fAndR[0] || "1"; document.getElementById('reqRoom').value = fAndR[1] || "";
+        showToast("已載入歷史地址"); saveDraft();
     }
-
     function editDemand(d) {
         document.getElementById('reqId').value = d["需求項目ID"]; document.getElementById('reqType').value = d["需求物件類型"];
         document.getElementById('reqItem').value = d["需求物件品項"]; document.getElementById('reqColor').value = d["需求物件色系"];
         document.getElementById('reqCondition').value = d["可接受物件狀態"] || "不拘"; document.getElementById('reqQty').value = d["需求數量"] || 1;
-        document.getElementById('reqDeadline').value = d["幾年幾月幾日前需拿到"].split('T')[0];
-        document.getElementById('reqNotes').value = d["備註"] || "";
-        
+        document.getElementById('reqDeadline').value = d["幾年幾月幾日前需拿到"].split('T')[0]; document.getElementById('reqNotes').value = d["備註"] || "";
         if(TW_DATA[d["所在地縣市"]]) { document.getElementById('reqCity').value = d["所在地縣市"]; updateDistricts(); document.getElementById('reqCityDist').value = d["所在地鄉鎮區村"]; }
         document.getElementById('reqRoad').value = d["所在地路段"]; document.getElementById('reqStreet').value = d["所在地街道"];
         document.getElementById('reqAlley').value = d["所在地巷弄"]; document.getElementById('reqNumber').value = d["所在地號碼"];
         const fAndR = (d["所在地樓層與室號"]||"").split('-'); document.getElementById('reqFloor').value = fAndR[0] || "1"; document.getElementById('reqRoom').value = fAndR[1] || "";
-        window.scrollTo({ top: 0, behavior: 'smooth' }); showToast("已載入編輯模式");
-        saveDraft(); // 載入後觸發自動存檔
+        window.scrollTo({ top: 0, behavior: 'smooth' }); showToast("已載入編輯模式"); saveDraft(); 
     }
-
     async function deleteDemand(id) {
         if(!confirm("確定要刪除此需求嗎？")) return;
         const res = await callBackend('deleteBuyerDemand', { id: id }); if(res) { showToast("已刪除"); loadMyDemands(); }
     }
 
-    // --- 媒合看板 ---
+    // --- 【Chapter 4】專屬媒合清單與 AI 談判 (Strategy Board) ---
     function setMatchType(type) {
         appData.currentMatchFilter = type;
         document.getElementById('filterBroad').classList.remove('active'); document.getElementById('filterExact').classList.remove('active');
-        document.getElementById(type === 'broad' ? 'filterBroad' : 'filterExact').classList.add('active');
-        renderMatches();
+        document.getElementById(type === 'broad' ? 'filterBroad' : 'filterExact').classList.add('active'); renderMatches();
     }
-
     async function loadMatches() {
         document.getElementById('matchResultsList').innerHTML = "智能演算中...";
         const res = await callBackend('getMatchesForBuyer', { email: appData.user.email });
         if(res) { appData.matches = res.matches || []; renderMatches(); }
     }
-
     function renderMatches() {
         const list = document.getElementById('matchResultsList');
         const filtered = appData.matches.filter(m => appData.currentMatchFilter === 'broad' ? m.isBroad : m.isExact);
-        
         if(filtered.length === 0) return list.innerHTML = "<div style='color:var(--text-muted);'>目前尚無符合的庫存。</div>";
         list.innerHTML = "";
-        filtered.forEach(m => {
+        
+        filtered.forEach((m, idx) => {
             let tagClass = "tag-green"; let statusText = "充裕";
             if(m.daysLeft <= 3) { tagClass = "tag-red"; statusText = "極緊急"; } else if (m.daysLeft <= 7) { tagClass = "tag-yellow"; statusText = "即將到期"; }
 
+            // 物理邊緣容納衝突檢測 (模擬防護：若任一邊大於 150cm 且未標示需要拆裝)
+            let warningHTML = "";
+            let L = parseInt(m.sellerItem["物件最長（寬）（公分）"]) || 0;
+            let W = parseInt(m.sellerItem["物件最寬（深）（公分）"]) || 0;
+            let H = parseInt(m.sellerItem["物件最高（公分）"]) || 0;
+            if (L >= 150 || W >= 150 || H >= 150) {
+                warningHTML = `<div style="background:#fff0f0; color:var(--accent-red); font-size:11px; padding:4px; font-weight:bold; margin-bottom:5px; border-left:2px solid var(--accent-red);">
+                [! 物理容納邊緣衝突預警 (物件尺寸: ${L}x${W}x${H} cm)]</div>`;
+            }
+
             list.innerHTML += `
-                <div class="card">
+                <div class="card" id="matchCard_${idx}">
+                    ${warningHTML}
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #eee; padding-bottom:8px; margin-bottom:8px;">
                         <div>
                             <strong style="font-size:15px; color:var(--primary-black);">${m.sellerItem["物件品項"]}</strong>
@@ -610,15 +618,211 @@
                         </div>
                     </div>
                     <div style="font-size:12px; margin-bottom:5px;">對應您的需求：[${m.demand["需求物件品項"]}]</div>
-                    <div class="benefit-text">
+                    <div class="benefit-text" style="margin-bottom:15px;">
                         <span class="ikea-save">省下 IKEA 同級新品費：$ ${m.sellerItem["比IKEA同種類商品便宜多少錢？"] || 0}</span>
                         <span class="co2-save">為地球減碳：${m.sellerItem["單品焚燒碳排放量"] || 0} KG CO2</span>
                     </div>
+                    <button id="btnAiNego_${idx}" onclick='launchNegotiation(${idx}, ${JSON.stringify(m).replace(/'/g, "&apos;")})' class="primary-btn">➔ 授權 AI 啟動談判</button>
                 </div>`;
         });
     }
 
-    // --- 會員專區 ---
+    async function launchNegotiation(idx, matchObj) {
+        // UI 變化：雙線鎖死 + 黑底白字唯讀標籤
+        const btn = document.getElementById(`btnAiNego_${idx}`);
+        const card = document.getElementById(`matchCard_${idx}`);
+        btn.disabled = true; btn.innerText = "● AI 正在背景替您劫貨談判中..."; btn.style.backgroundColor = "var(--primary-black)"; btn.style.color = "white";
+        card.classList.add("locked-negotiation");
+
+        const payload = {
+            buyerEmail: appData.user.email,
+            sellerId: matchObj.sellerItem["會員ID"],
+            sellerItemCode: matchObj.sellerItem["物件ID"],
+            demandId: matchObj.demand["需求項目ID"]
+        };
+        
+        const res = await callBackend('launchAiNegotiation', payload);
+        if(res) {
+            showToast("談判已啟動，請留意您的 8 小時死線信箱！");
+        } else {
+            // 防護：若有撞車衝突，還原狀態
+            btn.disabled = false; btn.innerText = "➔ 授權 AI 啟動談判"; card.classList.remove("locked-negotiation");
+        }
+    }
+
+    // --- 【Chapter 2】賣方智慧上架艙 (Seller Launchpad) ---
+    async function parseSellerMedia() {
+        const fileInput = document.getElementById('sellerMedia');
+        if(!fileInput.files.length) return showToast("請喚醒相機錄影或上傳圖片", true);
+        
+        document.getElementById('btnParseSellerMedia').disabled = true;
+        document.getElementById('btnParseSellerMedia').innerText = "AI 視覺解構與暗箱注入中...";
+        
+        let b64 = null;
+        const reader = new FileReader();
+        b64 = await new Promise(r => { reader.onload = () => r(reader.result); reader.readAsDataURL(fileInput.files[0]); });
+        
+        // 此處調用與買方相同的後端端點進行擴充解析
+        const res = await callBackend('aiParseSellerItem', { imageB64: b64 });
+        
+        document.getElementById('btnParseSellerMedia').disabled = false;
+        document.getElementById('btnParseSellerMedia').innerText = "AI 視覺解構與暗箱注入";
+
+        if(res) {
+            // 自動填入實體欄位
+            document.getElementById('sellerL').value = res.L || "";
+            document.getElementById('sellerW').value = res.W || "";
+            document.getElementById('sellerH').value = res.H || "";
+            
+            // 暗箱注入隱藏欄位
+            document.getElementById('sellerAiCategory').value = res.category || "";
+            document.getElementById('sellerAiItem').value = res.item || "";
+            document.getElementById('sellerAiName').value = res.name || "";
+            document.getElementById('sellerAiColor').value = res.color || "";
+            document.getElementById('sellerAiMaterial').value = res.material || "";
+            document.getElementById('sellerAiConditionStr').value = res.conditionStr || "";
+            document.getElementById('sellerAiStory').value = res.story || "";
+            document.getElementById('sellerAiCO2').value = res.co2 || "15";
+            document.getElementById('sellerAiIkeaDiff').value = res.ikeaDiff || "1200";
+
+            // 計算清運防虧損提示
+            const clearanceFee = res.clearanceFee || 1500;
+            const msgBox = document.getElementById('lossAversionMsg');
+            msgBox.innerHTML = `[! 利益精算預警] 若未能順利售出，您將倒貼 $${clearanceFee} 的清運費！順利賣出現省清運費，還多賺售價！`;
+            msgBox.style.display = 'block';
+
+            showToast("AI 辨識完成，已暗箱注入惜物文案與公分數據");
+        }
+    }
+
+    async function submitSellerItem() {
+        const price = parseInt(document.getElementById('sellerPrice').value);
+        if(isNaN(price) || price < 10 || price > 2000) return showToast("限價防線阻斷：售價請設定於 $10 ~ $2000 之間", true);
+        
+        const addr = document.getElementById('sellerAddress').value.trim();
+        const deadline = document.getElementById('sellerDeadline').value;
+        if(!addr || !deadline) return showToast("取件地址與死線日期不可空白", true);
+
+        // 收集欄位
+        const payload = {
+            email: appData.user.email,
+            aiCategory: document.getElementById('sellerAiCategory').value,
+            aiItem: document.getElementById('sellerAiItem').value,
+            aiName: document.getElementById('sellerAiName').value,
+            aiColor: document.getElementById('sellerAiColor').value,
+            aiMaterial: document.getElementById('sellerAiMaterial').value,
+            aiConditionStr: document.getElementById('sellerAiConditionStr').value,
+            aiStory: document.getElementById('sellerAiStory').value,
+            aiCO2: document.getElementById('sellerAiCO2').value,
+            aiIkeaDiff: document.getElementById('sellerAiIkeaDiff').value,
+            clearanceFee: 1500, // Fallback防線
+            L: document.getElementById('sellerL').value,
+            W: document.getElementById('sellerW').value,
+            H: document.getElementById('sellerH').value,
+            price: price,
+            discount: document.getElementById('sellerDiscount').value,
+            condition: document.getElementById('sellerCondition').value,
+            address: addr,
+            deadline: deadline,
+            dismantle: document.getElementById('sellerDismantle').value,
+            stairs: document.getElementById('sellerStairs').value,
+            helpDismantle: document.getElementById('sellerHelpDismantle').value,
+            helpMove: document.getElementById('sellerHelpMove').value
+        };
+
+        document.getElementById('btnSubmitSeller').disabled = true;
+        const res = await callBackend('saveSellerItem', payload);
+        document.getElementById('btnSubmitSeller').disabled = false;
+
+        if(res) {
+            showToast("上架成功！已入庫並開始精算曝光");
+            // 清空表單
+            ['sellerPrice','sellerDiscount','sellerAddress','sellerDeadline','sellerL','sellerW','sellerH'].forEach(id=>document.getElementById(id).value='');
+            document.getElementById('lossAversionMsg').style.display = 'none';
+        }
+    }
+
+    // --- 【Chapter 3】591式智慧成交大廳 (Match Lobby) ---
+    function toggleLobbyFilter(el) {
+        document.querySelectorAll('.lobby-toggle').forEach(t => {
+            t.classList.remove('active');
+            t.innerText = t.innerText.replace('● ', '○ '); // 還原為未選
+        });
+        el.classList.add('active');
+        if(el.dataset.cat !== '全部') el.innerText = el.innerText.replace('○ ', '● ');
+        appData.activeLobbyCat = el.dataset.cat;
+        renderLobby();
+    }
+
+    async function fetchLobbyData() {
+        document.getElementById('lobbyGrid').innerHTML = "刷新大廳頻寬中...";
+        const res = await callBackend('getLobbyProducts');
+        if(res) {
+            appData.lobby = res.active || [];
+            appData.lobbySold = res.sold || [];
+            document.getElementById('lobbyMacroStats').innerText = `● 平台已累計為地球成功減碳 ${res.totalCO2} KG ─ 累計為人類經濟贖回利潤 $${res.totalSaved} 元`;
+            document.getElementById('soldCount').innerText = appData.lobbySold.length;
+            renderLobby();
+        }
+    }
+
+    function renderLobby() {
+        const grid = document.getElementById('lobbyGrid');
+        grid.innerHTML = "";
+        
+        let filtered = appData.lobby;
+        if(appData.activeLobbyCat !== '全部') {
+            filtered = filtered.filter(item => String(item["物件種類"]).includes(appData.activeLobbyCat.replace('類','')));
+        }
+
+        if(filtered.length === 0) { grid.innerHTML = "<div class='col-span-full' style='color:var(--text-muted); text-align:center;'>此分類目前無鮮活好物</div>"; return; }
+
+        filtered.forEach(item => {
+            const daysLeft = parseInt(item["倒數天數"]) || 0;
+            let borderColor = "var(--accent-green)";
+            if(daysLeft <= 5) borderColor = "var(--accent-red)";
+            else if (daysLeft <= 10) borderColor = "var(--accent-yellow)";
+
+            // 擷取前6字洗鍊區域
+            const areaStr = String(item["取件地址（縣市/鄉鎮區/路段/街道/巷弄/號碼/樓層）"]).substring(0, 6) + "...";
+
+            grid.innerHTML += `
+                <div class="lobby-card" style="border-top: 2px solid ${borderColor};">
+                    <div style="font-weight:bold; font-size:14px; border-bottom:1px solid #eee; padding-bottom:4px;">${item["物件名稱"]}</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:11px; background:#f0f0f0; padding:2px 4px; border-radius:2px;">${areaStr}</span>
+                        <strong style="color:var(--primary-black);">$${item["售價/件"]}</strong>
+                    </div>
+                    <div style="font-size:11px; color:var(--text-muted);">
+                        剩餘死線：${daysLeft} 天 | 狀態：${item["二手狀態（近全新/良好/普通）"]}
+                    </div>
+                    <div class="benefit-text" style="margin-top:4px;">
+                        <span class="ikea-save" style="font-size:10px;">差額：$${item["比IKEA同種類商品便宜多少錢？"]}</span>
+                        <span class="co2-save" style="font-size:10px;">減碳：${item["單品焚燒碳排放量"]}KG</span>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function toggleSoldLobby() {
+        const soldGrid = document.getElementById('lobbySoldGrid');
+        if(soldGrid.style.display === 'none') {
+            soldGrid.style.display = 'grid';
+            soldGrid.innerHTML = "";
+            appData.lobbySold.forEach(item => {
+                soldGrid.innerHTML += `
+                    <div class="lobby-card" style="background:#f5f5f5; border:1px solid #e0e0e0; opacity:0.8;">
+                        <div style="font-weight:bold; text-decoration:line-through; color:#999;">${item["物件名稱"]}</div>
+                        <div style="font-size:11px; color:#555; text-align:center; padding:4px; background:#e0e0e0; margin-top:5px;">● 已點交結案</div>
+                    </div>`;
+            });
+        } else {
+            soldGrid.style.display = 'none';
+        }
+    }
+
+    // --- 會員專區 (保留不變) ---
     function renderProfileZone(profile) {
         const area = document.getElementById('profileFieldsArea'); area.innerHTML = '';
         let codeKey = Object.keys(profile).find(k => k.includes("對話代碼"));
@@ -629,7 +833,6 @@
         ];
         fields.forEach(f => { area.innerHTML += `<div style="margin-bottom:10px;"><label>${f.label}</label><input type="text" id="${f.id||''}" value="${f.val||''}" disabled class="profile-inputs"></div>`; });
     }
-
     function toggleProfileEdit() {
         isProfileEditing = !isProfileEditing;
         document.querySelectorAll('.profile-inputs[id]').forEach(i => i.disabled = !isProfileEditing);
