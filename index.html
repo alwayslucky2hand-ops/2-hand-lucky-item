@@ -117,8 +117,10 @@
         <div id="authStepRegisterInterview" class="auth-step">
             <p style="font-size: 13px; color: blue; font-weight: bold;">[AI 活體偵測] 新用戶請配合開啟相機錄製聲明：</p>
             <div style="background: #f9f9f9; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; font-size: 12px; line-height:1.4;">
-                <strong style="color:var(--accent-red);">請將臉部對準綠框，並大聲唸出以下資訊：</strong><br>
-                “我是 [真實姓名]，電話 [手機號碼]，預計 [買或賣二手]。我的身分證字號是 [字號]，出生年月日 [西元日期]，戶籍地址為 [身分證反面地址]”
+                <strong style="color:var(--accent-red);">請將臉部對準綠框，並清楚唸出以下資訊：</strong><br>
+                “我是 [真實姓名]，電話 [手機號碼]，預計 [買或賣二手]。<br>
+                我的身分證字號是 [字號]，出生年月日 [西元日期]，戶籍地址為 [身分證反面地址]。<br>
+                <span style="background:yellow;">我要提領的銀行代碼是 [代碼]，帳號是 [帳號數字]</span>”
             </div>
             
             <div class="camera-container">
@@ -136,7 +138,7 @@
 
         <div id="authStepRegisterId" class="auth-step">
             <p style="font-size: 13px; color: #444; font-weight:bold;">步驟四：身分證實況防偽拍攝</p>
-            <p style="font-size: 11px; color: red;">請將證件對齊紅線框。AI 若偵測到模糊或反光將要求重拍。</p>
+            <p style="font-size: 11px; color: red;">請將證件對齊紅線框。AI 若偵測到模糊或與剛才口白不符將要求重拍。</p>
             
             <div class="camera-container">
                 <video id="liveVideoId" autoplay playsinline></video>
@@ -157,7 +159,8 @@
 
         <div id="authStepRegisterBank" class="auth-step">
             <p style="font-size: 13px; color: #444; font-weight:bold;">步驟五：銀行存摺實況防偽拍攝</p>
-            
+            <p style="font-size: 11px; color: red;">請將存摺對齊紅線框。將與您剛才口述的銀行帳號進行雙重對碰。</p>
+
             <div class="camera-container">
                 <video id="liveVideoBank" autoplay playsinline></video>
                 <div class="scan-overlay-doc" id="docOverlayBank">請對齊銀行存摺封面</div>
@@ -305,7 +308,6 @@
         return canvas.toDataURL('image/jpeg', 0.85); // 產生 Base64
     }
 
-    // --- Base64 檔案轉換引擎 (僅剩上架與簽名使用) ---
     function fileToBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -348,7 +350,7 @@
         document.querySelectorAll('.auth-step').forEach(el => el.classList.remove('active'));
         const target = document.getElementById(`authStep${stepIndex}`) || document.getElementById(stepIndex);
         if(target) target.classList.add('active');
-        stopCamera(); // 切換步驟時關閉背景鏡頭
+        stopCamera(); 
     }
 
     async function requestEmailOtp() {
@@ -515,6 +517,9 @@
             tempRegisterCache.idNum = res.idNumber || "未提取";
             tempRegisterCache.dob = res.dob || "未提取";
             tempRegisterCache.address = res.address || "未提取";
+            // 抓取口述的銀行資料暫存，留給下一步對碰
+            tempRegisterCache.spokenBankCode = res.spokenBankCode || "";
+            tempRegisterCache.spokenBankAccount = res.spokenBankAccount || "";
             
             switchAuthStep('authStepRegisterBank');
             startCamera('liveVideoBank', 'environment');
@@ -529,7 +534,9 @@
 
         const res = await callBackend('processBankCard', { 
             email: appData.user.email, 
-            bankB64: tempRegisterCache.bankB64 
+            bankB64: tempRegisterCache.bankB64,
+            spokenBankCode: tempRegisterCache.spokenBankCode,
+            spokenBankAccount: tempRegisterCache.spokenBankAccount
         });
 
         document.getElementById('btnProcessBank').disabled = false;
@@ -586,7 +593,7 @@
         }
     }
 
-    // --- 原有平台大廳功能保持不動 ---
+    // --- 平台業務功能保持不動 ---
     document.querySelectorAll('#mainNav div').forEach(nav => {
         nav.addEventListener('click', function() { switchSection(this.getAttribute('data-target')); });
     });
