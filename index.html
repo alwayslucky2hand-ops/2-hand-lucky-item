@@ -106,31 +106,41 @@
         <h3>真人使用、童叟無欺安全閘門</h3>
         
         <div id="authStep1" class="auth-step active">
-            <p style="font-size: 13px; color: #444;">步驟一：請輸入您的電子信箱驗證或註冊</p>
+            <p style="font-size: 13px; color: #444;">驗證門：請輸入您的電子信箱驗證或註冊</p>
             <input type="email" id="gatewayEmail" placeholder="請輸入通訊信箱 (Email)">
             <button onclick="requestEmailOtp()" id="btnSendOtp">➔ 發送6位數線上驗證碼</button>
         </div>
 
         <div id="authStep2" class="auth-step">
-            <p style="font-size: 13px; color: #444;">步驟二：請輸入寄送到信箱的 6 位數密碼</p>
+            <p style="font-size: 13px; color: #444;">驗證門：請輸入寄送到信箱的 6 位數密碼</p>
             <input type="text" id="gatewayOtp" placeholder="輸入6位數驗證碼" maxlength="6">
             <button onclick="verifyEmailOtp()" id="btnVerifyOtp">○ 核對驗證碼並通關</button>
-            <button style="font-size: 11px; padding: 5px;" onclick="switchAuthStep(1)">返回修改 Email</button>
+            <button style="font-size: 11px; padding: 5px;" onclick="switchAuthStep('authStep1')">返回修改 Email</button>
         </div>
 
         <div id="authStepLoginCheck" class="auth-step">
-            <p style="font-size: 13px; color: red; font-weight: bold;">[安全防護] 平台已偵測到您的帳號。請回答當初留存的三項個人檔案進行對碰：</p>
+            <p style="font-size: 13px; color: red; font-weight: bold;">[安全防護] 偵測到您為開通會員。請回答當初留存的三項個人檔案進行對碰：</p>
             <div id="loginQuestionArea"></div>
-            <button onclick="submitLoginQuestions()">● 送出 AI 檔案比對登入</button>
+            <button onclick="submitLoginQuestions()">● 送出資料比對登入</button>
         </div>
 
-        <div id="authStepRegisterInterview" class="auth-step">
-            <p style="font-size: 13px; color: blue; font-weight: bold;">[AI 活體偵測] 新用戶請配合開啟相機錄製聲明：</p>
+        <div id="authStepManualForm" class="auth-step">
+            <p style="font-size: 13px; color: blue; font-weight: bold;">[階段 1/3：基本資料建檔]</p>
+            <p style="font-size: 11px; color: #666;">請確實填寫，後續的 AI 錄影與證件驗證將以此資料進行嚴格交叉對碰。</p>
+            <input type="text" id="manName" placeholder="真實姓名 (例：陳小明)">
+            <input type="text" id="manPhone" placeholder="10位數通訊電話 (例：0912345678)" maxlength="10">
+            <input type="text" id="manDob" placeholder="8位數西元生日 (例：19900101)" maxlength="8">
+            <input type="text" id="manIdNum" placeholder="10碼身分證字號 (例：A123456789)" maxlength="10" style="text-transform: uppercase;">
+            <button onclick="submitManualForm()" id="btnSubmitManual">➔ 儲存資料並進入影音辨識</button>
+        </div>
+
+        <div id="authStepVideo" class="auth-step">
+            <p style="font-size: 13px; color: blue; font-weight: bold;">[階段 2/3：AI 活體影音防偽比對]</p>
             <div style="background: #f9f9f9; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; font-size: 12px; line-height:1.4;">
-                <strong style="color:var(--accent-red);">請將臉部對準綠框，並清楚唸出以下資訊：</strong><br>
-                “我是 [真實姓名]，電話 [手機號碼]，預計 [買或賣二手]。<br>
-                我的身分證字號是 [字號]，出生年月日 [西元日期]，戶籍地址為 [身分證反面地址]。<br>
-                <span style="background:yellow;">我要提領的銀行代碼是 [代碼]，帳號是 [帳號數字]</span>”
+                <strong style="color:var(--accent-red);">請將臉部對準綠框，並清楚唸出您剛才輸入的資訊：</strong><br>
+                “我的生日是 <span id="promptDob" style="font-weight:bold; background:yellow;"></span>，<br>
+                電話號碼是 <span id="promptPhone" style="font-weight:bold; background:yellow;"></span>，<br>
+                身分證字號為 <span id="promptIdNum" style="font-weight:bold; background:yellow;"></span>”
             </div>
             
             <div class="camera-container">
@@ -140,60 +150,40 @@
             </div>
             
             <button onclick="startInterviewRecording()" id="btnStartRec" style="background:var(--accent-red); color:#fff;">● 啟動相機並開始錄製</button>
-            <button onclick="stopInterviewRecording()" id="btnStopRec" style="display:none; background:var(--accent-green); color:#fff;">■ 錄製完畢，產生數位資產並暫存</button>
+            <button onclick="stopInterviewRecording()" id="btnStopRec" style="display:none; background:var(--accent-green); color:#fff;">■ 錄製完畢，交由 AI 對碰口白</button>
 
-            <textarea id="registerSpokenText" rows="3" placeholder="[AI 語音動態轉文字] 錄音時將自動聽寫，若辨識有誤請於錄影後手動補齊..."></textarea>
-            <button onclick="proceedToIdCapture()" id="btnNextToId" style="display:none;">○ 內容無誤，進入證件實況拍攝</button>
+            <textarea id="registerSpokenText" rows="3" placeholder="[語音動態轉文字] 錄音時將自動聽寫，若辨識有誤請於錄影後手動補齊..."></textarea>
+            <button onclick="processVideoMatch()" id="btnProcessVideo" style="display:none; background:var(--primary-black); color:#fff;">➔ 授權 AI 嚴格比對錄音內容</button>
         </div>
 
-        <div id="authStepRegisterId" class="auth-step">
-            <p style="font-size: 13px; color: #444; font-weight:bold;">步驟四：身分證實況防偽拍攝</p>
-            <p style="font-size: 11px; color: red;">請將證件對齊紅線框。AI 若偵測到模糊或與剛才口白不符將要求重拍。</p>
+        <div id="authStepIdCard" class="auth-step">
+            <p style="font-size: 13px; color: blue; font-weight: bold;">[階段 3/3：實體證件防偽比對]</p>
+            <p style="font-size: 11px; color: #444;">支援相機現拍或相片上傳。AI 將提取文字與您輸入的資料進行 1:1 最終對碰。</p>
             
-            <div class="camera-container">
-                <video id="liveVideoId" autoplay playsinline></video>
-                <div class="cam-placeholder-text" id="camPlaceholderId">[鏡頭啟動中...]</div>
-                <div class="scan-overlay-doc" id="docOverlayId" style="display:none;">請對齊身分證正面</div>
+            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                <div style="flex:1; border:1px dashed #000; padding:15px; text-align:center; cursor:pointer; background:#fff;" onclick="document.getElementById('idFrontFile').click()">
+                    <span style="font-size:24px;">📸</span><br><strong style="font-size:12px;">上傳/拍攝 正面</strong>
+                    <input type="file" id="idFrontFile" accept="image/*" style="display:none;" onchange="handleIdFile('front', this)">
+                    <div id="frontStatus" style="font-size:10px; color:green; margin-top:5px; display:none;">✅ 已選取</div>
+                </div>
+                <div style="flex:1; border:1px dashed #000; padding:15px; text-align:center; cursor:pointer; background:#fff;" onclick="document.getElementById('idBackFile').click()">
+                    <span style="font-size:24px;">📸</span><br><strong style="font-size:12px;">上傳/拍攝 反面</strong>
+                    <input type="file" id="idBackFile" accept="image/*" style="display:none;" onchange="handleIdFile('back', this)">
+                    <div id="backStatus" style="font-size:10px; color:green; margin-top:5px; display:none;">✅ 已選取</div>
+                </div>
             </div>
-            
-            <div style="display:flex; gap:5px;">
-                <button onclick="captureDocument('idFront')" id="btnCapIdFront">📸 拍下正面</button>
-                <button onclick="captureDocument('idBack')" id="btnCapIdBack" style="display:none;">📸 拍下反面</button>
-            </div>
-            
-            <div id="idPreviewArea" style="display:none; margin-top:10px; font-size:11px;">
-                <p>✅ 正反面擷取成功</p>
-                <button onclick="processRegisterIdCard()" id="btnProcessId" style="background:var(--primary-black); color:#fff;">➔ 授權 AI 讀取匹配 (模糊將退回)</button>
-                <button onclick="resetCapture('id')" style="font-size:11px; padding:8px;">重新拍攝</button>
-            </div>
+
+            <button onclick="processIdMatch()" id="btnProcessId" style="background:var(--primary-black); color:#fff; display:none;">➔ 授權 AI 視覺對碰證件與資料</button>
         </div>
 
-        <div id="authStepRegisterBank" class="auth-step">
-            <p style="font-size: 13px; color: #444; font-weight:bold;">步驟五：銀行存摺/數位帳戶相片辨識</p>
-            <p style="font-size: 11px; color: red;">支援直接拍照或上傳截圖，將與您的錄影口述交叉比對。</p>
-            
-            <div style="border:2px dashed var(--accent-red); padding:30px; text-align:center; background:#fff; cursor:pointer; border-radius: 8px;" onclick="document.getElementById('bankFileInput').click()">
-                <span style="font-size:30px;">📸 / 📂</span><br>
-                <strong>點擊此處拍照或選擇照片檔案</strong>
-                <input type="file" id="bankFileInput" accept="image/*" style="display:none;" onchange="handleBankFileSelect(this)">
-            </div>
-            
-            <div id="bankPreviewArea" style="display:none; margin-top:15px; font-size:11px; text-align:center;">
-                <p style="color:var(--accent-green); font-size:14px; font-weight:bold;">✅ 檔案已妥善選取</p>
-                <button onclick="processRegisterBank()" id="btnProcessBank" style="background:var(--primary-black); color:#fff; margin-top:10px;">➔ 授權 AI 提取並暫存帳戶資訊</button>
-                <button onclick="document.getElementById('bankFileInput').click()" style="font-size:11px; padding:8px;">重新選擇檔案</button>
-            </div>
-        </div>
-
-        <div id="authStepRegisterReview" class="auth-step">
-            <p style="font-size: 14px; color: green; font-weight: bold;">✔ AI 多維辨識完畢！請終審您的檔案：</p>
-            <p style="font-size: 11px; color: #666;">如遇 AI 辨識錯字，請直接點擊下方輸入框進行修改，有打勾代表已成功讀取。</p>
+        <div id="authStepReview" class="auth-step">
+            <p style="font-size: 14px; color: green; font-weight: bold;">✔ AI 雙重對碰防偽辨識完畢！歡迎加入特洛伊：</p>
+            <p style="font-size: 11px; color: #666;">您的資料已與錄影口白及證件達成 100% 完美匹配。</p>
             <table class="review-table">
-                <thead><tr><th>項目欄位</th><th>提取結果 (可直接修正)</th></tr></thead>
                 <tbody id="reviewTableBody">
                     </tbody>
             </table>
-            <button onclick="submitFinalRegistration()" id="btnFinalReg">● 本人確認以上資料真實無誤，登入系統</button>
+            <button onclick="executeFinalRegistration()" id="btnFinalReg">● 確認無誤，正式開通平台權限</button>
         </div>
     </section>
 
@@ -211,7 +201,7 @@
 
     <section id="profileZone" class="section">
         <h3>TROY 系統安全唯讀盾牌（會員專區）</h3>
-        <p style="font-size:11px; color:#666;">基於實名認證防護，日常狀態下全面鎖定。如需更新財務與通訊資料請點擊解鎖。</p>
+        <p style="font-size:11px; color:#666;">基於實名認證防護，日常狀態下全面鎖定。如需更新資料請點擊解鎖。</p>
         <div id="profileFieldsArea"></div>
         <button onclick="toggleProfileEdit()" id="btnToggleProfileEdit" style="background:#000; color:#fff;">🔓 解鎖個人檔案群</button>
         <button onclick="saveProfileChanges()" id="btnSaveProfile" style="display:none; background:var(--accent-green); color:#fff;">💾 儲存修改至資料庫</button>
@@ -229,10 +219,9 @@
     /** ⚠️ 硬編碼與全域資料快取區 **/
     let appData = { lobby: [], matches: [], user: { email: "" } };
     let currentActiveRowId = null;
-    let tempRegisterCache = { idFrontUrl: "", idBackUrl: "", bankUrl: "", videoUrl: "", intent: "買賣雙棲", spokenText:"" }; 
+    let tempRegisterCache = { name: "", phone: "", dob: "", idNum: "", videoB64: "", spokenText: "", idFrontB64: "", idBackB64: "" }; 
     let isProfileEditing = false;
 
-    // 相機與錄影全域控制器
     let currentStream = null;
     let mediaRecorder = null;
     let recordedChunks = [];
@@ -242,10 +231,7 @@
     async function startCamera(videoElementId, placeholderId, overlayId, facingMode = "user") {
         if(currentStream) stopCamera();
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: facingMode }, 
-                audio: videoElementId === 'liveVideoInterview' 
-            });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode }, audio: true });
             const videoEl = document.getElementById(videoElementId);
             videoEl.srcObject = stream;
             videoEl.style.display = 'block';
@@ -253,27 +239,11 @@
             if(document.getElementById(overlayId)) document.getElementById(overlayId).style.display = 'flex';
             currentStream = stream;
             return true;
-        } catch(e) {
-            console.error("相機存取故障", e);
-            showToast("無法存取相機，請允許權限");
-            return false;
-        }
+        } catch(e) { showToast("無法存取相機"); return false; }
     }
 
     function stopCamera() {
-        if(currentStream) {
-            currentStream.getTracks().forEach(t => t.stop());
-            currentStream = null;
-        }
-    }
-
-    function captureFrameFromVideo(videoElementId) {
-        const video = document.getElementById(videoElementId);
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        return canvas.toDataURL('image/jpeg', 0.85); 
+        if(currentStream) { currentStream.getTracks().forEach(t => t.stop()); currentStream = null; }
     }
 
     function fileToBase64(file) {
@@ -287,19 +257,14 @@
 
     // --- 後端連線引擎 ---
     async function callBackend(funcName, payload = {}) {
-        showToast(`系統處理中，請稍候...`);
+        showToast(`系統雲端處理中...`);
         try {
             const response = await fetch("https://script.google.com/macros/s/AKfycbwaq-13DlQxTCBTnTdJ1ILFvUvnr-_P7tKbeSXUixN3oaRMcoWnIH4qJuxjrRUtpUtK/exec", {
-                method: 'POST',
-                body: JSON.stringify({ action: funcName, data: payload })
+                method: 'POST', body: JSON.stringify({ action: funcName, data: payload })
             });
             const res = await response.json();
             return unpack(res);
-        } catch (e) {
-            console.error("Fetch Error:", e);
-            showToast("網路連線超時");
-            return null;
-        }
+        } catch (e) { showToast("網路連線超時"); return null; }
     }
 
     function unpack(res) {
@@ -314,9 +279,9 @@
     }
 
     // --- 認證與註冊流程 ---
-    function switchAuthStep(stepIndex) {
+    function switchAuthStep(stepId) {
         document.querySelectorAll('.auth-step').forEach(el => el.classList.remove('active'));
-        const target = document.getElementById(stepIndex) || document.getElementById(`authStep${stepIndex}`);
+        const target = document.getElementById(stepId);
         if(target) target.classList.add('active');
         stopCamera(); 
     }
@@ -328,7 +293,7 @@
         document.getElementById('btnSendOtp').disabled = true;
         const res = await callBackend('sendOtpCode', { email: email });
         document.getElementById('btnSendOtp').disabled = false;
-        if(res) { showToast("驗證碼已發送！"); switchAuthStep("authStep2"); }
+        if(res) { showToast("驗證碼已發送！"); switchAuthStep('authStep2'); }
     }
 
     async function verifyEmailOtp() {
@@ -344,18 +309,18 @@
                 switchAuthStep('authStepLoginCheck');
                 renderLoginQuestions(res.questions);
             } else if(res.resumeMode) {
-                // 斷點續傳機制啟動
-                showToast("已為您自動載入上次中斷的進度！");
+                showToast("偵測到暫存紀錄，自動接續進度！");
                 Object.assign(tempRegisterCache, res.savedData);
-                document.getElementById('registerSpokenText').value = res.savedData.spokenText || "";
                 
-                if (res.resumeStep === "authStepRegisterReview") {
-                    renderReviewForm(tempRegisterCache);
-                }
+                // 動態渲染提詞機
+                if(tempRegisterCache.dob) document.getElementById('promptDob').innerText = tempRegisterCache.dob;
+                if(tempRegisterCache.phone) document.getElementById('promptPhone').innerText = tempRegisterCache.phone;
+                if(tempRegisterCache.idNum) document.getElementById('promptIdNum').innerText = tempRegisterCache.idNum;
+
+                if (res.resumeStep === "authStepReview") renderReviewForm(tempRegisterCache);
                 switchAuthStep(res.resumeStep);
-                if(res.resumeStep === "authStepRegisterId") startCamera('liveVideoId', 'camPlaceholderId', 'docOverlayId', 'environment');
             } else {
-                switchAuthStep('authStepRegisterInterview');
+                switchAuthStep('authStepManualForm');
             }
         }
     }
@@ -379,32 +344,50 @@
         } else { showToast("❌ 資料與庫存檔案原件不符"); }
     }
 
-    // --- AI 實境視訊與語音捕捉系統 ---
+    // --- 階段一：打字建檔 ---
+    async function submitManualForm() {
+        const data = {
+            email: appData.user.email,
+            name: document.getElementById('manName').value.trim(),
+            phone: document.getElementById('manPhone').value.trim(),
+            dob: document.getElementById('manDob').value.trim(),
+            idNum: document.getElementById('manIdNum').value.trim().toUpperCase()
+        };
+        if(!data.name || data.phone.length !== 10 || data.dob.length !== 8 || data.idNum.length !== 10) {
+            return showToast("請確實填寫所有欄位且長度正確");
+        }
+        
+        document.getElementById('btnSubmitManual').disabled = true;
+        const res = await callBackend('saveBasicInfo', { basicData: data });
+        document.getElementById('btnSubmitManual').disabled = false;
+
+        if(res) {
+            Object.assign(tempRegisterCache, data);
+            document.getElementById('promptDob').innerText = data.dob;
+            document.getElementById('promptPhone').innerText = data.phone;
+            document.getElementById('promptIdNum').innerText = data.idNum;
+            showToast("基礎資料暫存成功！進入防偽視訊。");
+            switchAuthStep('authStepVideo');
+        }
+    }
+
+    // --- 階段二：AI 活體語音智能對碰 ---
     async function startInterviewRecording() {
         const started = await startCamera('liveVideoInterview', 'camPlaceholderInterview', 'faceOverlay', 'user');
         if(!started) return;
 
         document.getElementById('btnStartRec').style.display = 'none';
         document.getElementById('btnStopRec').style.display = 'block';
+        document.getElementById('btnProcessVideo').style.display = 'none';
 
         recordedChunks = [];
         mediaRecorder = new MediaRecorder(currentStream, { mimeType: 'video/webm;codecs=vp8,opus' });
         mediaRecorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data); };
         mediaRecorder.onstop = async () => {
             const blob = new Blob(recordedChunks, { type: 'video/webm' });
-            const videoB64 = await fileToBase64(blob);
-            const spokenText = document.getElementById('registerSpokenText').value.trim();
-            
-            // 影片封裝後立刻寫入後端斷點暫存
-            showToast("影片封裝中，即將同步至區塊庫...");
-            const saveRes = await callBackend('saveInterviewStep', { email: appData.user.email, videoB64: videoB64, spokenText: spokenText });
-            if(saveRes) {
-                tempRegisterCache.videoUrl = saveRes.videoUrl;
-                tempRegisterCache.spokenText = saveRes.spokenText;
-                document.getElementById('camPlaceholderInterview').innerText = "[錄影完畢，已建立即時對碰備份]";
-                document.getElementById('btnNextToId').style.display = 'block';
-                showToast("雲端建檔成功，可進入下一步");
-            }
+            tempRegisterCache.videoB64 = await fileToBase64(blob);
+            document.getElementById('btnProcessVideo').style.display = 'block';
+            showToast("影片封裝完畢，請點擊送出進行 AI 語音對碰");
         };
         mediaRecorder.start();
 
@@ -426,7 +409,6 @@
 
     function stopInterviewRecording() {
         document.getElementById('btnStopRec').style.display = 'none';
-        document.getElementById('btnStopRec').innerText = "上傳中請稍候...";
         if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
         if(recognition) recognition.stop();
         stopCamera();
@@ -434,145 +416,111 @@
         document.getElementById('faceOverlay').style.display = 'none';
         document.getElementById('liveVideoInterview').style.display = 'none';
         document.getElementById('camPlaceholderInterview').style.display = 'block';
-        document.getElementById('camPlaceholderInterview').innerText = "[正在加密傳輸至伺服器...]";
+        document.getElementById('camPlaceholderInterview').innerText = "[錄影資料已封裝，請送出比對]";
     }
 
-    function proceedToIdCapture() {
-        switchAuthStep('authStepRegisterId');
-        startCamera('liveVideoId', 'camPlaceholderId', 'docOverlayId', 'environment'); 
-    }
+    async function processVideoMatch() {
+        const spokenText = document.getElementById('registerSpokenText').value.trim();
+        if(!spokenText || !tempRegisterCache.videoB64) return showToast("口白缺失，請重新錄影填寫");
+        
+        document.getElementById('btnProcessVideo').disabled = true;
+        document.getElementById('btnProcessVideo').innerText = "AI 音文跨模態交叉比對中...";
 
-    // --- 身分證實境捕捉 ---
-    function captureDocument(type) {
-        if(type === 'idFront') {
-            tempRegisterCache.idFrontB64 = captureFrameFromVideo('liveVideoId');
-            document.getElementById('docOverlayId').innerText = "請對齊身分證反面";
-            document.getElementById('btnCapIdFront').style.display = 'none';
-            document.getElementById('btnCapIdBack').style.display = 'block';
-        } else if (type === 'idBack') {
-            tempRegisterCache.idBackB64 = captureFrameFromVideo('liveVideoId');
-            stopCamera();
-            document.getElementById('btnCapIdBack').style.display = 'none';
-            document.getElementById('docOverlayId').style.display = 'none';
-            document.getElementById('idPreviewArea').style.display = 'block';
+        const res = await callBackend('processVideoMatch', { 
+            email: appData.user.email, 
+            videoB64: tempRegisterCache.videoB64, 
+            spokenText: spokenText,
+            basicData: tempRegisterCache // 傳送第一步填寫的基底資料供AI對碰
+        });
+
+        document.getElementById('btnProcessVideo').disabled = false;
+        document.getElementById('btnProcessVideo').innerText = "➔ 授權 AI 嚴格比對錄音內容";
+
+        if(res) {
+            showToast("口白與基底資料 100% 吻合！");
+            switchAuthStep('authStepIdCard');
+        } else {
+            showToast("⚠️ AI 判定口述與基底資料不符，請重新錄影");
+            document.getElementById('btnStartRec').style.display = 'block';
+            document.getElementById('btnProcessVideo').style.display = 'none';
+            document.getElementById('registerSpokenText').value = "";
         }
     }
 
-    function resetCapture(type) {
-        if(type === 'id') {
-            document.getElementById('idPreviewArea').style.display = 'none';
-            document.getElementById('btnCapIdFront').style.display = 'block';
-            document.getElementById('docOverlayId').innerText = "請對齊身分證正面";
-            startCamera('liveVideoId', 'camPlaceholderId', 'docOverlayId', 'environment');
+    // --- 階段三：身分證 OCR 視覺對碰 ---
+    async function handleIdFile(type, input) {
+        const file = input.files[0];
+        if(!file) return;
+        const b64 = await fileToBase64(file);
+        if(type === 'front') {
+            tempRegisterCache.idFrontB64 = b64;
+            document.getElementById('frontStatus').style.display = 'block';
+        } else {
+            tempRegisterCache.idBackB64 = b64;
+            document.getElementById('backStatus').style.display = 'block';
+        }
+
+        if(tempRegisterCache.idFrontB64 && tempRegisterCache.idBackB64) {
+            document.getElementById('btnProcessId').style.display = 'block';
         }
     }
 
-    async function processRegisterIdCard() {
-        document.getElementById('btnProcessId').innerText = "雲端交叉解構並暫存中...";
+    async function processIdMatch() {
         document.getElementById('btnProcessId').disabled = true;
+        document.getElementById('btnProcessId').innerText = "AI 視覺解析與基底對碰中...";
 
-        const res = await callBackend('processIdCard', { 
+        const res = await callBackend('processIdMatch', { 
             email: appData.user.email, 
             frontB64: tempRegisterCache.idFrontB64, 
-            backB64: tempRegisterCache.idBackB64, 
-            text: tempRegisterCache.spokenText 
+            backB64: tempRegisterCache.idBackB64,
+            basicData: tempRegisterCache
         });
 
         document.getElementById('btnProcessId').disabled = false;
-        document.getElementById('btnProcessId').innerText = "➔ 授權 AI 讀取匹配";
+        document.getElementById('btnProcessId').innerText = "➔ 授權 AI 視覺對碰證件與資料";
 
         if(res) {
-            Object.assign(tempRegisterCache, res);
-            switchAuthStep('authStepRegisterBank');
-        } else { resetCapture('id'); }
-    }
-
-    // --- 銀行存摺雙軌上傳處理 ---
-    async function handleBankFileSelect(input) {
-        const file = input.files[0];
-        if(!file) return;
-        document.getElementById('bankFileInput').parentElement.style.display = 'none'; // 隱藏按鈕區
-        
-        tempRegisterCache.bankB64 = await fileToBase64(file);
-        document.getElementById('bankPreviewArea').style.display = 'block';
-    }
-
-    async function processRegisterBank() {
-        document.getElementById('btnProcessBank').innerText = "多維防偽對碰中...";
-        document.getElementById('btnProcessBank').disabled = true;
-
-        const res = await callBackend('processBankCard', { 
-            email: appData.user.email, 
-            bankB64: tempRegisterCache.bankB64,
-            spokenBankCode: tempRegisterCache.spokenBankCode,
-            spokenBankAccount: tempRegisterCache.spokenBankAccount
-        });
-
-        document.getElementById('btnProcessBank').disabled = false;
-        document.getElementById('btnProcessBank').innerText = "➔ 授權 AI 提取帳戶資訊";
-
-        if(res) {
-            Object.assign(tempRegisterCache, res);
+            showToast("證件解析完美吻合！");
             renderReviewForm(tempRegisterCache);
-            switchAuthStep('authStepRegisterReview');
-        } else { 
-            document.getElementById('bankPreviewArea').style.display = 'none';
-            document.getElementById('bankFileInput').parentElement.style.display = 'block';
+            switchAuthStep('authStepReview');
+        } else {
+            showToast("⚠️ AI 判定證件模糊或與輸入基底不符，請重傳");
+            tempRegisterCache.idFrontB64 = ""; tempRegisterCache.idBackB64 = "";
+            document.getElementById('frontStatus').style.display = 'none';
+            document.getElementById('backStatus').style.display = 'none';
+            document.getElementById('btnProcessId').style.display = 'none';
         }
     }
 
-    // --- 終審多維勾選與直接編輯介面渲染器 ---
+    // --- 最終核對放行 ---
     function renderReviewForm(cache) {
         const targetBody = document.getElementById('reviewTableBody');
         targetBody.innerHTML = '';
-
         const schema = [
-            { id: "revRole", label: "買賣意向", val: cache.intent },
-            { id: "revName", label: "真實姓名", val: cache.name },
-            { id: "revPhone", label: "通訊電話", val: cache.phone },
-            { id: "revDob", label: "出生年月日", val: cache.dob },
-            { id: "revIdNum", label: "身分證號碼", val: cache.idNumber || cache.idNum },
-            { id: "revAddress", label: "戶籍地址", val: cache.address },
-            { id: "revBankCode", label: "銀行代碼", val: cache.bankCode },
-            { id: "revBankAccount", label: "銀行帳號", val: cache.accountNum || cache.bankAccount }
+            { label: "真實姓名", val: cache.name },
+            { label: "通訊電話", val: cache.phone },
+            { label: "出生年月日", val: cache.dob },
+            { label: "身分證號碼", val: cache.idNum || cache.idNumber }
         ];
 
         schema.forEach(item => {
-            const hasData = item.val && String(item.val).trim() !== "" && !String(item.val).includes("未提取");
-            const indicator = hasData ? `<span class="checkmark-status status-ok">✔️ 讀取成功</span>` : `<span class="checkmark-status status-err">⚠️ 請手動填寫</span>`;
-            
             targetBody.innerHTML += `
                 <tr>
-                    <td>${item.label} ${indicator}</td>
-                    <td><input type="text" id="${item.id}" value="${item.val || ''}"></td>
+                    <td style="font-weight:bold;">${item.label}</td>
+                    <td style="color:var(--accent-green); font-weight:bold;">✔️ 完美匹配確認 (${item.val})</td>
                 </tr>
             `;
         });
     }
 
-    async function submitFinalRegistration() {
-        document.getElementById('btnFinalReg').innerText = "正在覆寫至最高權限庫...";
+    async function executeFinalRegistration() {
+        document.getElementById('btnFinalReg').innerText = "正在賦予最高權限庫...";
         document.getElementById('btnFinalReg').disabled = true;
 
-        const finalData = {
-            email: appData.user.email,
-            role: document.getElementById('revRole').value.trim(),
-            name: document.getElementById('revName').value.trim(),
-            phone: document.getElementById('revPhone').value.trim(),
-            dob: document.getElementById('revDob').value.trim(),
-            idNum: document.getElementById('revIdNum').value.trim(),
-            address: document.getElementById('revAddress').value.trim(),
-            bankCode: document.getElementById('revBankCode').value.trim(),
-            bankAccount: document.getElementById('revBankAccount').value.trim()
-        };
-
-        const res = await callBackend('executeMemberRegistration', { finalData: finalData });
+        const res = await callBackend('executeFinalRegistration', { email: appData.user.email });
         if(res) {
             showToast("實名認證群成功開通！");
-            unlockPlatform(finalData); // 此處直接傳 finalData，讓前端不需再拉一次 Profile
-        } else {
-            document.getElementById('btnFinalReg').disabled = false;
-            document.getElementById('btnFinalReg').innerText = "● 本人確認以上資料真實無誤，登入系統";
+            unlockPlatform(res.fullProfile); 
         }
     }
 
@@ -587,18 +535,14 @@
         const area = document.getElementById('profileFieldsArea');
         area.innerHTML = '';
         
-        // 核心對齊 31 欄
+        // 核心對齊 22 欄
         const fields = [
-            { label: "會員系統內部ID", val: profile.memberId || profile["會員ID"] || "自動配發", editable: false },
-            { label: "實名認證 Email", val: profile.email || profile["會員Email"], editable: false },
-            { label: "目前意向設定", val: profile.role || profile["你是想找二手/賣二手？"], id: "profRole", editable: true },
-            { label: "認證真實姓名", val: profile.name || profile["會員姓名"], id: "profName", editable: true },
-            { label: "聯絡通訊電話", val: profile.phone || profile["會員電話"], id: "profPhone", editable: true },
-            { label: "出生年月日", val: profile.dob || profile["出生年月日"], id: "profDob", editable: true },
-            { label: "身分證號碼", val: profile.idNum || profile.idNumber || profile["身分證號碼"], id: "profIdNum", editable: true },
-            { label: "戶籍地址備忘", val: profile.address || profile["戶籍地址"], id: "profAddress", editable: true },
-            { label: "提領銀行代碼", val: profile.bankCode || profile["銀行帳戶銀行代碼"], id: "profBankCode", editable: true },
-            { label: "提領匯款帳號", val: profile.bankAccount || profile.accountNum || profile["銀行帳戶號碼"], id: "profBankAccount", editable: true }
+            { label: "會員系統內部ID", val: profile["會員ID"], editable: false },
+            { label: "實名認證 Email", val: profile["會員Email"], editable: false },
+            { label: "認證真實姓名", val: profile["會員姓名"], id: "profName", editable: true },
+            { label: "聯絡通訊電話", val: profile["會員電話"], id: "profPhone", editable: true },
+            { label: "出生年月日", val: profile["出生年月日"], id: "profDob", editable: true },
+            { label: "身分證號碼", val: profile["身分證號碼"], id: "profIdNum", editable: true }
         ];
 
         fields.forEach(f => {
@@ -632,15 +576,11 @@
     async function saveProfileChanges() {
         document.getElementById('btnSaveProfile').innerText = "儲存中...";
         const updatedData = {
-            email: document.getElementById('gatewayEmail').value.trim() || appData.user.email,
-            role: document.getElementById('profRole').value,
+            email: appData.user.email,
             name: document.getElementById('profName').value,
             phone: document.getElementById('profPhone').value,
             dob: document.getElementById('profDob').value,
-            idNum: document.getElementById('profIdNum').value,
-            address: document.getElementById('profAddress').value,
-            bankCode: document.getElementById('profBankCode').value,
-            bankAccount: document.getElementById('profBankAccount').value
+            idNum: document.getElementById('profIdNum').value
         };
 
         const res = await callBackend('updateMemberProfile', { updatedData: updatedData });
