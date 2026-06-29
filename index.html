@@ -58,18 +58,24 @@
             position: relative; width: 100%; height: 350px; background: #000; overflow: hidden; margin-bottom: 15px;
             display: flex; justify-content: center; align-items: center; border: 2px solid var(--border-color);
         }
-        .camera-container video { width: 100%; height: 100%; object-fit: cover; }
+        .camera-container video { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; display: none;
+        }
+        .cam-placeholder-text {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #ffffff; font-size: 13px; text-align: center; width: 100%; z-index: 5;
+        }
         
         /* AI Scanning Overlays */
         .scan-overlay-face {
             position: absolute; width: 60%; height: 70%; border: 2px dashed var(--accent-green); border-radius: 50%;
             top: 15%; left: 20%; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,0.4);
-            display: flex; align-items: flex-end; justify-content: center; padding-bottom: 20px; color: var(--accent-green); font-size: 12px; font-weight: bold;
+            display: flex; align-items: flex-end; justify-content: center; padding-bottom: 20px; color: var(--accent-green); font-size: 12px; font-weight: bold; z-index: 10;
         }
         .scan-overlay-doc {
             position: absolute; width: 85%; height: 60%; border: 3px solid var(--accent-red); border-radius: 8px;
             top: 20%; left: 7.5%; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,0.6);
-            display: flex; align-items: center; justify-content: center; color: var(--accent-red); font-size: 14px; font-weight: bold; text-shadow: 1px 1px 2px #000;
+            display: flex; align-items: center; justify-content: center; color: var(--accent-red); font-size: 14px; font-weight: bold; text-shadow: 1px 1px 2px #000; z-index: 10;
         }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -126,7 +132,7 @@
             <div class="camera-container">
                 <video id="liveVideoInterview" autoplay playsinline muted></video>
                 <div class="scan-overlay-face" id="faceOverlay" style="display:none;">AI 活體收音監測中...</div>
-                <div id="camPlaceholderInterview" style="color:#fff; font-size:12px;">[請點擊下方按鈕喚醒相機]</div>
+                <div class="cam-placeholder-text" id="camPlaceholderInterview">[請點擊下方按鈕喚醒相機]</div>
             </div>
             
             <button onclick="startInterviewRecording()" id="btnStartRec" style="background:var(--accent-red); color:#fff;">● 啟動相機並開始錄製</button>
@@ -142,7 +148,8 @@
             
             <div class="camera-container">
                 <video id="liveVideoId" autoplay playsinline></video>
-                <div class="scan-overlay-doc" id="docOverlayId">請對齊身分證正面</div>
+                <div class="cam-placeholder-text" id="camPlaceholderId">[鏡頭啟動中...]</div>
+                <div class="scan-overlay-doc" id="docOverlayId" style="display:none;">請對齊身分證正面</div>
             </div>
             
             <div style="display:flex; gap:5px;">
@@ -159,11 +166,12 @@
 
         <div id="authStepRegisterBank" class="auth-step">
             <p style="font-size: 13px; color: #444; font-weight:bold;">步驟五：銀行存摺實況防偽拍攝</p>
-            <p style="font-size: 11px; color: red;">請將存摺對齊紅線框。將與您剛才口述的銀行帳號進行雙重對碰。</p>
+            <p style="font-size: 11px; color: red;">請將存摺(或數位帳戶螢幕)對齊紅線框。將與口述進行雙重對碰。</p>
 
             <div class="camera-container">
                 <video id="liveVideoBank" autoplay playsinline></video>
-                <div class="scan-overlay-doc" id="docOverlayBank">請對齊銀行存摺封面</div>
+                <div class="cam-placeholder-text" id="camPlaceholderBank">[鏡頭啟動中...]</div>
+                <div class="scan-overlay-doc" id="docOverlayBank" style="display:none;">請對齊銀行存摺封面</div>
             </div>
             
             <button onclick="captureDocument('bank')" id="btnCapBank">📸 拍下存摺封面</button>
@@ -273,7 +281,7 @@
     let recognition = null;
 
     // --- 相機公用模組 ---
-    async function startCamera(videoElementId, facingMode = "user") {
+    async function startCamera(videoElementId, placeholderId, overlayId, facingMode = "user") {
         if(currentStream) stopCamera();
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -283,6 +291,8 @@
             const videoEl = document.getElementById(videoElementId);
             videoEl.srcObject = stream;
             videoEl.style.display = 'block';
+            if(document.getElementById(placeholderId)) document.getElementById(placeholderId).style.display = 'none';
+            if(document.getElementById(overlayId)) document.getElementById(overlayId).style.display = 'flex';
             currentStream = stream;
             return true;
         } catch(e) {
@@ -397,11 +407,9 @@
 
     // --- AI 實境視訊與語音捕捉系統 (前鏡頭 User) ---
     async function startInterviewRecording() {
-        const started = await startCamera('liveVideoInterview', 'user');
+        const started = await startCamera('liveVideoInterview', 'camPlaceholderInterview', 'faceOverlay', 'user');
         if(!started) return;
 
-        document.getElementById('camPlaceholderInterview').style.display = 'none';
-        document.getElementById('faceOverlay').style.display = 'flex';
         document.getElementById('btnStartRec').style.display = 'none';
         document.getElementById('btnStopRec').style.display = 'block';
 
@@ -438,7 +446,7 @@
         
         document.getElementById('faceOverlay').style.display = 'none';
         document.getElementById('liveVideoInterview').style.display = 'none';
-        document.getElementById('camPlaceholderInterview').style.display = 'flex';
+        document.getElementById('camPlaceholderInterview').style.display = 'block';
         document.getElementById('camPlaceholderInterview').innerText = "[錄影完畢，資料已封裝]";
         
         document.getElementById('btnStopRec').style.display = 'none';
@@ -451,7 +459,7 @@
         if(!spoken && !tempRegisterCache.videoB64) return showToast("請完成錄影或手動填寫口白資料");
         tempRegisterCache.spokenText = spoken;
         switchAuthStep('authStepRegisterId');
-        startCamera('liveVideoId', 'environment'); // 自動開啟後鏡頭
+        startCamera('liveVideoId', 'camPlaceholderId', 'docOverlayId', 'environment'); // 自動開啟後鏡頭
     }
 
     // --- 實境捕捉證件與存摺 (後鏡頭 Environment) ---
@@ -483,14 +491,12 @@
         if(type === 'id') {
             document.getElementById('idPreviewArea').style.display = 'none';
             document.getElementById('btnCapIdFront').style.display = 'block';
-            document.getElementById('docOverlayId').style.display = 'flex';
             document.getElementById('docOverlayId').innerText = "請對齊身分證正面";
-            startCamera('liveVideoId', 'environment');
+            startCamera('liveVideoId', 'camPlaceholderId', 'docOverlayId', 'environment');
         } else if (type === 'bank') {
             document.getElementById('bankPreviewArea').style.display = 'none';
             document.getElementById('btnCapBank').style.display = 'block';
-            document.getElementById('docOverlayBank').style.display = 'flex';
-            startCamera('liveVideoBank', 'environment');
+            startCamera('liveVideoBank', 'camPlaceholderBank', 'docOverlayBank', 'environment');
         }
     }
 
@@ -522,7 +528,7 @@
             tempRegisterCache.spokenBankAccount = res.spokenBankAccount || "";
             
             switchAuthStep('authStepRegisterBank');
-            startCamera('liveVideoBank', 'environment');
+            startCamera('liveVideoBank', 'camPlaceholderBank', 'docOverlayBank', 'environment');
         } else {
             resetCapture('id');
         }
