@@ -22,29 +22,29 @@
 
         .container { max-width: 600px; margin: 0 auto; padding: 20px; background: var(--bg-white); min-height: 100vh; border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); position: relative;}
         
-        /* Typography */
+         
         header { border-bottom: 2px solid var(--primary-black); padding-bottom: 12px; margin-bottom: 0; text-align: center; }
         h1 { font-size: 22px; font-weight: 700; margin: 0 0 4px 0; }
         .subtitle { font-size: 12px; color: var(--text-muted); margin: 0; }
         h3 { font-size: 16px; font-weight: 600; border-left: 3px solid var(--primary-black); padding-left: 10px; margin-top: 0; }
 
-        /* Global User Bar */
+         
         #globalUserBar {
             display: none; background: var(--primary-black); color: var(--bg-white); font-size: 12px;
             padding: 8px 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
         }
 
-        /* Layout */
+         
         .section { display: none; padding: 20px 0; animation: fadeIn 0.3s ease; }
         .section.active { display: block; }
         
-        /* Navigation */
+         
         nav { display: flex; overflow-x: auto; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; padding-bottom: 5px; scrollbar-width: none; gap: 5px; }
         nav::-webkit-scrollbar { display: none; }
         nav div { padding: 8px 14px; cursor: pointer; white-space: nowrap; font-size: 13px; color: var(--text-muted); transition: 0.2s; border-radius: 2px; }
         nav div.active { color: var(--primary-black); font-weight: 600; background: #f0f0f0; }
 
-        /* UI Components */
+         
         input, textarea, select { 
             width: 100%; border: 1px solid var(--border-color); padding: 10px; margin: 6px 0 12px 0; 
             border-radius: 2px; outline: none; font-size: 13px; background: var(--bg-white); transition: border 0.2s;
@@ -70,7 +70,7 @@
         .card.locked-negotiation { border: 2px double var(--primary-black); background: #fafafa; pointer-events: none;}
         .card.locked-negotiation button { pointer-events: auto; }
         
-        /* Status Tags & Indicators */
+         
         .tag { display: inline-block; padding: 3px 8px; font-size: 11px; font-weight: bold; border-radius: 2px; margin-right: 5px; }
         .tag-red { background: #fff0f0; color: var(--accent-red); border: 1px solid #ffdcdc; }
         .tag-yellow { background: #fffcf0; color: #b97700; border: 1px solid #ffebc2; }
@@ -82,34 +82,34 @@
         .ikea-save { color: #d35400; border-left: 2px solid #d35400; background: #fafafa; }
         .co2-save { color: #117a65; border-left: 2px solid #117a65; background: #fafafa; }
 
-        /* Sub-Navigation */
+         
         .sub-nav { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
         .sub-nav span { flex: 1; text-align: center; padding: 10px; font-size: 13px; cursor: pointer; color: var(--text-muted); }
         .sub-nav span.active { color: var(--primary-black); border-bottom: 2px solid var(--primary-black); font-weight: 600; }
 
-        /* Match Filters */
+         
         .match-filters { display: flex; gap: 10px; margin-bottom: 15px; }
         .match-btn { flex: 1; padding: 8px; font-size: 12px; border: 1px solid var(--border-color); background: var(--bg-white); color: var(--text-muted); transition: 0.2s; }
         .match-btn.active { background: var(--primary-black); color: var(--bg-white); border-color: var(--primary-black); font-weight: bold; }
 
-        /* Grid Layouts */
+         
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 10px; }
         .col-span-full { grid-column: 1 / -1; }
 
-        /* Address Bar Styling */
+         
         .address-module { background: #fdfdfd; border: 1px solid #eee; padding: 12px; border-radius: 2px; margin-bottom: 15px; }
 
-        /* Toast Feedback */
+         
         .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--primary-black); color: var(--bg-white); padding: 12px 24px; font-size: 13px; font-weight: 600; border-radius: 2px; display: none; z-index: 9999; text-align: center; }
         .toast.error { background: var(--accent-red); }
 
-        /* Seller Form specific styling */
+         
         .seller-input-group { border-bottom: 1px solid var(--primary-black); padding-bottom: 15px; margin-bottom: 15px; background: var(--bg-white); }
         .seller-input-group:last-child { border-bottom: none; }
         .warning-box { background: #fff4e5; border-left: 3px solid #f5b041; padding: 10px; font-size: 12px; margin-bottom: 15px; color: #b97700; font-weight: bold; }
 
-        /* Lobby specific styling */
+         
         .lobby-filters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 15px; }
         .lobby-toggle { border: 1px solid var(--primary-black); background: var(--bg-white); color: var(--primary-black); font-size: 12px; padding: 6px; cursor: pointer; text-align: center; transition: 0.2s; }
         .lobby-toggle.active { background: var(--primary-black); color: var(--bg-white); }
@@ -117,7 +117,7 @@
         .lobby-sold-banner { text-align: center; font-size: 12px; padding: 10px; border-top: 1px solid var(--primary-black); border-bottom: 1px solid var(--border-color); margin: 20px 0; cursor: pointer; background: #fafafa; color: var(--text-muted); transition: 0.2s; }
         .lobby-sold-banner:hover { background: #f0f0f0; color: var(--primary-black); }
 
-        /* Signature Modal */
+         
         #signModal { display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10000; padding:20px; align-items:center; justify-content:center; flex-direction:column; }
         #signModalContent { background:var(--bg-white); padding:20px; border-radius:2px; width:100%; text-align:center; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
 
@@ -389,10 +389,10 @@
 <div id="toast" class="toast"></div>
 
 <script>
-    // 嚴格依循規範：固定宣告於頂部
+    
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwaq-13DlQxTCBTnTdJ1ILFvUvnr-_P7tKbeSXUixN3oaRMcoWnIH4qJuxjrRUtpUtK/exec";
 
-    // 台灣縣市輕量資料庫
+    
     const TW_DATA = {
         "台北市": ["中正區","大同區","中山區","松山區","大安區","萬華區","信義區","士林區","北投區","內湖區","南港區","文山區"],
         "新北市": ["板橋區","三重區","中和區","永和區","新莊區","新店區","樹林區","鶯歌區","三峽區","淡水區","汐止區","瑞芳區","土城區","蘆洲區","五股區","泰山區","林口區","深坑區","石碇區","坪林區","三芝區","石門區","八里區","平溪區","雙溪區","貢寮區","金山區","萬里區","烏來區"],
@@ -409,7 +409,7 @@
     let isProfileEditing = false;
     let savedAddresses = [];
 
-    // --- LocalStorage 自動儲存與恢復機制 ---
+    
     function saveDraft() {
         const draft = {
             id: document.getElementById('reqId').value, type: document.getElementById('reqType').value,
@@ -477,7 +477,7 @@
         if(city && TW_DATA[city]) { TW_DATA[city].forEach(d => distSelect.add(new Option(d, d))); }
     }
 
-    // --- 後端連線引擎 ---
+    
     async function callBackend(funcName, payload = {}) {
         showToast(`系統雲端處理中...`);
         try {
@@ -494,7 +494,7 @@
         if(t) { t.innerText = msg; t.style.display = 'block'; t.className = `toast ${isError ? 'error' : ''}`; setTimeout(() => t.style.display = 'none', 3000); }
     }
 
-    // --- 認證流程 ---
+    
     async function requestEmailOtp() {
         const email = document.getElementById('gatewayEmail').value.trim();
         if(!email || !email.includes('@')) return showToast("請輸入信箱", true);
@@ -639,7 +639,7 @@
         const res = await callBackend('deleteBuyerDemand', { id: id }); if(res) { showToast("已刪除"); loadMyDemands(); }
     }
 
-    // --- 【Chapter 4】買方視角：匹配清單與 AI 出兵 ---
+    
     function setMatchType(type) {
         appData.currentMatchFilter = type;
         document.getElementById('filterBroad').classList.remove('active'); document.getElementById('filterExact').classList.remove('active');
