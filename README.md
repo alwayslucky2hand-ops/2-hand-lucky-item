@@ -1,1 +1,1 @@
-# 2-hand-lucky-item
+# 2handluckyitem
